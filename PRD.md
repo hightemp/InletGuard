@@ -3,7 +3,7 @@
 > **Baseline English version.** The authoritative document is
 > [`PRD.ru.md`](PRD.ru.md) (Russian). This file follows it section by section
 > in condensed form; if they disagree, the Russian version wins.
-> Implementation notes (section 13) are kept in `PRD.ru.md` only.
+> Every change goes into both files in the same commit.
 
 > **Development method: TDD.** No production code without a failing test
 > first (red → green → refactor). See section 9 and [`TASKS.md`](TASKS.md).
@@ -338,5 +338,46 @@ optional Redis/Memcached.
 
 ## 13. Implementation notes
 
-Kept in [`PRD.ru.md`](PRD.ru.md), section 13 (written before each task is
-implemented).
+> Project rule (`AGENTS.md`): take a task → think it through and write a note
+> here **and** in `PRD.ru.md` → only then implement. A note records the
+> decision, rejected alternatives and the test plan. Numbers refer to
+> `TASKS.md`. The Russian notes are more detailed.
+
+### 0.1 Extension skeleton *(written after the fact — the AGENTS.md rule was noticed after implementation)*
+- Classic PECL layout (`config.m4`, `php_inletguard.h`, `inletguard.c` in the root); core in `src/core/` (pure C99), integration in `src/zend/`.
+- `--enable-inletguard-dev` adds `-Wall -Wextra -Werror` (minus `unused-parameter` and `missing-field-initializers`, produced by Zend macros); not default, so user builds on newer compilers do not break.
+- `-std=gnu99` for the extension (PHP 7.x headers use GNU extensions); the core is checked with strict `-std=c99 -pedantic` in the unit build.
+
+### 0.3 C unit test runner *(after the fact)*
+- Own ~100-line runner instead of cmocka/Unity: zero dependencies, works with old toolchains.
+- Tests self-register via `__attribute__((constructor))`; standalone `tests/unit/Makefile` (no PHP needed), exposed as `make unit` / `make unit-asan`.
+
+### 0.2 `InletGuard\version()` — first TDD cycle
+- Single version source `src/core/ig_version.h`; `ig_version()` in the core.
+- Namespaced function via `ZEND_NS_NAMED_FE` (available in 7.0–8.4).
+- `ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX` has an extra `class_name` argument in 7.0–7.1 → first compat wrapper `IG_BEGIN_ARG_WITH_RETURN_TYPE_INFO` in `php_compat.h`.
+- Tests first: unit test (red: missing header), phpt for value/format (red: undefined function), Reflection phpt for the signature.
+- Result: green on 7.0, 7.1, 7.2, 7.4, 8.1, 8.4 NTS and 8.4 ZTS; the Reflection test uses `getName()` because `__toString()` is deprecated in 7.1–7.4.
+
+### 0.5 / 0.5b CI `ci.yml`
+- Official `php:<ver>-cli|zts` images exist for 7.0–8.4 with `phpize` and `php-cgi`; but `php:7.0-cli` has glibc 2.24 and JavaScript actions need node 20+ (glibc ≥ 2.28) → no job-level `container:`; checkout on the host, build via `docker run` with `scripts/ci/phpt.sh` (same script locally).
+- `REPORT_EXIT_STATUS=1` (old `run-tests.php` exits 0 on failures).
+- Deviations found while running every job locally: `gcc:4.8` uses a v1 manifest → replaced by `centos:7` (GCC 4.8.5, glibc 2.17, vault repos); stock PHP loads extensions with `RTLD_DEEPBIND`, incompatible with ASan → a small `dlopen()` interposer strips the flag, works on 8.1+ images; 7.x ASan moves to 0.5d (PHP built from source); `-Werror` off in ASan mode (PHP 8.1 headers redefine `__SANITIZE_ADDRESS__` under GCC 14); LeakSanitizer off (fails in unprivileged containers), leaks covered by Valgrind.
+- Negative check: a deliberate heap overflow fails both the ASan and the Valgrind job (the first trap used a constant `emalloc(4)`, which lands in an 8-byte size class and was not detected — traps must use a dynamic size).
+
+### 0.6 Linters, 0.11 README/CONTRIBUTING, 0.12 Licensing
+- clang-format pinned to 18.1.8; Zend tables wrapped in `clang-format off/on`; cppcheck on `src/core`; clang-tidy deferred to phase 1.
+- MIT `LICENSE`, `THIRD_PARTY_NOTICES` (empty until libinjection is vendored), `scripts/check-license.sh` (SPDX headers, no GPL/LGPL in `third_party/`), verified to fail on a file without a header.
+
+### Bilingual docs and GitHub repository
+- `PRD.ru.md`/`TASKS.ru.md` are authoritative, `PRD.md`/`TASKS.md` are baseline English versions; every change goes into both files of a pair in the same commit, including implementation notes.
+- Repository created with `gh repo create` (public), description and topics set with `gh repo edit`.
+
+### 0.5b Branch protection for `main`
+**Decision:**
+- Require a pull request and passing status checks; **0 required approvals** (single maintainer cannot approve own PRs); no "branch must be up to date" (strict) requirement — avoids rebasing every PR after each merge.
+- Only one required check: an aggregate job **`ci-ok`** that `needs` all other jobs and fails if any of them failed or was cancelled. Requiring 31 matrix job names would break as soon as the matrix changes (PRs would wait forever for a check that no longer exists).
+- Never use `paths-ignore`/`paths` filters on `ci.yml`: a required check that does not run blocks the PR forever.
+- Admins are also subject to the rules (`enforce_admins`), so the process is the same for everyone; force pushes and branch deletion are blocked.
+
+**Rollout:** add `ci-ok` on a branch → open a PR → after `ci-ok` reports green, enable protection via the GitHub API → merge the PR with `gh pr merge` (validates the new flow end to end).

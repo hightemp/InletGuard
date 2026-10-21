@@ -17,8 +17,9 @@
 > disabled at build time, at startup, per pool/vhost and by a rule; every
 > module task includes a "disabled → no effect" test.
 >
-> **Before coding** a task, write an implementation note in `PRD.ru.md`,
-> section 13 (see `AGENTS.md`).
+> **Before coding** a task, write an implementation note in `PRD.ru.md`
+> and `PRD.md`, section 13 (see `AGENTS.md`). Every change to PRD/TASKS
+> goes into both language versions.
 
 ---
 

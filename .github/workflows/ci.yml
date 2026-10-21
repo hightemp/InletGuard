@@ -102,3 +102,19 @@ jobs:
       - run: docker run --rm -v "$PWD:/src:ro" "php:${PHP}-cli" sh /src/scripts/ci/phpt.sh
         env:
           PHP: ${{ matrix.php }}
+
+  # The only required status check for main. Requiring individual matrix jobs
+  # would break whenever the matrix changes. Never add path filters to this
+  # workflow: a required check that does not run blocks the PR forever.
+  ci-ok:
+    name: ci-ok
+    if: always()
+    needs: [lint, unit, unit-centos7, phpt, phpt-asan, phpt-valgrind, phpt-arm64]
+    runs-on: ubuntu-24.04
+    steps:
+      - name: All CI jobs succeeded
+        env:
+          NEEDS: ${{ toJSON(needs) }}
+        run: |
+          echo "$NEEDS" | jq -r 'to_entries[] | "\(.key): \(.value.result)"'
+          echo "$NEEDS" | jq -e 'to_entries | all(.value.result == "success")' >/dev/null
