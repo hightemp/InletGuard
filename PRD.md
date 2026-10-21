@@ -708,3 +708,32 @@ SEVERITY    = "info" | "low" | "medium" | "high" | "critical" ;
 3. phpt `003-version-reflection.phpt`: Reflection — функция в пространстве имён `InletGuard`, 0 параметров, тип возврата `string` на всех версиях. Проверяет обёртку arginfo.
 
 **Проверка:** локально PHP 7.2, 7.4, 8.1, 8.4 (phvm) + 7.0 в Docker; полная матрица — после CI (0.5).
+
+### 0.5 / 0.5b CI `ci.yml`
+**Факты, на которые опирается решение (проверено):**
+- Официальные образы `php:<ver>-cli` и `php:<ver>-zts` есть для всех 7.0–8.4 и содержат `phpize` и `php-cgi` (нужен для phpt-секций `--GET--/--POST--`).
+- В `php:7.0-cli` glibc 2.24, а JavaScript-actions (`actions/checkout` и др.) внутри job-контейнера требуют node 20+ → glibc ≥ 2.28. Поэтому **job-level `container:` не используем**: checkout выполняется на хосте раннера, сборка — через `docker run` с примонтированным исходником.
+
+**Решение:**
+- Один скрипт `scripts/ci/phpt.sh` (сборка `phpize → configure --enable-inletguard-dev → make → make test`) — одинаково запускается в CI и локально: `docker run --rm -v "$PWD:/src:ro" php:8.4-zts sh /src/scripts/ci/phpt.sh`. Исходник монтируется read-only и копируется внутрь контейнера, чтобы артефакты сборки не попадали в рабочую копию.
+- `REPORT_EXIT_STATUS=1` — иначе `run-tests.php` старых версий завершается с кодом 0 даже при падениях; при падении печатаются `.diff`.
+- Jobs: `lint` (clang-format, cppcheck по `src/core`, SPDX/лицензии), `unit` (gcc и clang, обычная и ASan/UBSan сборка ядра), `unit-gcc48` (ядро собирается в образе `gcc:4.8` — проверка C99 на старом компиляторе), `phpt` (матрица 10 версий × `cli`/`zts`), `phpt-asan` (расширение с ASan, `LD_PRELOAD=libasan`, `USE_ZEND_ALLOC=0`, на 7.4 и 8.4), `phpt-valgrind` (8.4, `run-tests -m`), `phpt-arm64` (7.0 и 8.4 на `ubuntu-24.04-arm`).
+- `concurrency` с отменой устаревших прогонов, `permissions: contents: read`.
+- Actions закреплены по SHA коммита с комментарием версии; Dependabot обновляет `github-actions` еженедельно.
+
+**Отложено (с причиной):**
+- Закрепление Docker-образов по digest — в матрице 20 образов; делаем в 0.5d вместе с релизными образами, сейчас — теги. Риск: тег `php:7.0-cli` заморожен (EOL), дрейф только у поддерживаемых веток.
+- Сборка *расширения* на GCC 4.8 / glibc 2.17 требует PHP, собранного из исходников в таком окружении — это делается в 0.5d (релизные сборки). Сейчас на GCC 4.8 проверяется только ядро.
+
+**Проверка:** workflow валидируется `actionlint`; реальный прогон — после появления GitHub-репозитория (remote пока не настроен).
+
+### 0.6 Линтеры
+- `.clang-format`: стиль PHP-исходников (табы шириной 4, скобки функций на новой строке, лимит 100 колонок). Версия clang-format закреплена (`clang-format==18.1.8` из PyPI) — разные версии форматируют по-разному.
+- `cppcheck` по `src/core` (чистый C99, без заголовков PHP), `--error-exitcode=1`.
+- `clang-tidy` — отложен до появления содержательного кода ядра (фаза 1): на текущем объёме даёт только шум.
+
+### 0.11 README / CONTRIBUTING, 0.12 Лицензирование
+- `README.md` и `CONTRIBUTING.md` — на английском (NFR-8). README честно говорит, что проект в разработке и релизов до v1.0.0 нет (PRD 9.2).
+- `LICENSE` — MIT, правообладатель «InletGuard contributors».
+- `THIRD_PARTY_NOTICES` — пока без записей (libinjection вендорится в 0.7); формат файла задаётся сейчас.
+- `scripts/check-license.sh`: SPDX-заголовок в первых 3 строках каждого `*.c`, `*.h`, `*.m4`, `Makefile*`, `*.sh` вне `third_party/`; наличие `LICENSE` и `THIRD_PARTY_NOTICES`; в `third_party/` каждая библиотека содержит файл лицензии, и он не GPL/LGPL.
