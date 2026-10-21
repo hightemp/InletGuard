@@ -861,3 +861,19 @@ SEVERITY    = "info" | "low" | "medium" | "high" | "critical" ;
 **Итог локального прогона на bundle из dry-run:** официальные образы x86_64 — 20/20 (NTS и ZTS всех веток), Debian 12 + `packages.sury.org` — 10/10, AlmaLinux 8 + Remi — 8/8 (7.2–8.4), AlmaLinux 9 + Remi — 6/6 (7.4–8.4). PPA `ondrej/php` на Launchpad дважды отдал 503 (сначала на пакетах, потом на индексе, после чего пакеты «не найдены»), а сам PPA сообщает о переезде на `packages.sury.org`. Поэтому вместо Ubuntu + PPA — Debian 12 + `packages.sury.org` (канонический источник тех же сборок), с `Acquire::Retries` и установкой только `phpX.Y-cli`.
 
 **Тесты (red первыми):** `tests/scripts/test-smoke.sh` — заглушка `php` (shell-скрипт, отвечающий на запросы ветки/ZTS/версии модуля) и фиктивные архивы: выбирается архив своей ветки/варианта/архитектуры; отсутствие подходящего архива → ошибка; два подходящих → ошибка; модуль сообщает чужую версию → ошибка; проверка через упакованный ini выполняется. Реальная загрузка `.so` проверяется самим job `smoke`.
+
+### 0.7 Вендоринг libinjection
+**Факты (проверено):**
+- Активный upstream — `github.com/libinjection/libinjection` (релиз **v4.0.0**, март 2026, коммит `211782219663f889f471650150df12b623c5766e`); исходный `client9/libinjection` не обновлялся с 2023 г. Лицензия — BSD-3-Clause (совместима с MIT, NFR-9).
+- v4.0 меняет API: функции возвращают `injection_result_t` (`FALSE`/`TRUE`/`ERROR`) и **больше не вызывают `abort()`** при ошибке парсера — критично для NFR-2/NFR-3 (никогда не ронять PHP). `ERROR` будет транслироваться в `internal_error` и `fail_mode` (фазы 1 и 4).
+- Нужны 9 файлов из `src/`: `libinjection.h`, `libinjection_error.h`, `libinjection_sqli.{c,h}`, `libinjection_sqli_data.h`, `libinjection_xss.{c,h}`, `libinjection_html5.{c,h}`.
+- Собирается GCC 4.8.5 (CentOS 7). GCC 13 даёт 2 предупреждения `-Wenum-int-mismatch` в коде upstream (объявление `int`, определение — `enum`).
+
+**Решение:**
+- `third_party/libinjection/`: файлы **без изменений**, `COPYING`, `README.inletguard.md` (upstream, тег, коммит, дата, SHA256 каждого файла).
+- `scripts/vendor-libinjection.sh <tag>` — воспроизводимое обновление (клонировать тег, скопировать файлы, записать README с коммитом и SHA256). `scripts/check-vendor.sh` в `lint` сверяет SHA256 файлов с README — правка вендоренного кода без обновления записи не пройдёт.
+- Сборка: чужой код собирается **отдельными флагами** — без `-Werror` и наших строгих предупреждений (`PHP_ADD_SOURCES_X` в `config.m4`; в unit- и fuzz-Makefile — отдельные правила). Свой код по-прежнему с `-Werror`. Модифицировать upstream ради предупреждений не будем; о предупреждениях можно сообщить upstream.
+- `THIRD_PARTY_NOTICES` — запись о libinjection (версия, лицензия, путь к тексту лицензии).
+- Обёртки над API (`ig_detect_sqli`/`ig_detect_xss`) — это задачи 1.1–1.2, не 0.7.
+
+**Тесты (red первыми):** unit-тест «библиотека слинкована, версия ожидаемая»: `libinjection_version()` возвращает версию вендоренного тега; плюс `scripts/check-vendor.sh` проверяется на временной копии с изменённым файлом (должен упасть).

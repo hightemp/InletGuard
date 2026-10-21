@@ -33,6 +33,8 @@ jobs:
         run: sh scripts/check-license.sh
       - name: version checks only in php_compat.h
         run: sh scripts/check-compat.sh
+      - name: vendored code is unmodified
+        run: sh scripts/check-vendor.sh
       - name: tests for CI scripts
         run: |
           sh tests/scripts/test-check-compat.sh
@@ -41,6 +43,7 @@ jobs:
           sh tests/scripts/test-release-policy.sh
           sh tests/scripts/test-check-version.sh
           sh tests/scripts/test-smoke.sh
+          sh tests/scripts/test-check-vendor.sh
 
   unit:
     name: unit (${{ matrix.cc }}${{ matrix.sanitize == '1' && ', asan+ubsan' || '' }})

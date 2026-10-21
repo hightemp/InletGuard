@@ -49,6 +49,7 @@
 
 # unit tests
 /tests/unit/ig_unit
+/tests/unit/tp_*.o
 
 # release packaging
 /dist/
