@@ -1,0 +1,60 @@
+/* SPDX-License-Identifier: MIT */
+
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
+#include "php.h"
+#include "ext/standard/info.h"
+#include "php_inletguard.h"
+
+static PHP_MINIT_FUNCTION(inletguard)
+{
+	return SUCCESS;
+}
+
+static PHP_MSHUTDOWN_FUNCTION(inletguard)
+{
+	return SUCCESS;
+}
+
+static PHP_RINIT_FUNCTION(inletguard)
+{
+#if defined(ZTS) && defined(COMPILE_DL_INLETGUARD)
+	ZEND_TSRMLS_CACHE_UPDATE();
+#endif
+	return SUCCESS;
+}
+
+static PHP_RSHUTDOWN_FUNCTION(inletguard)
+{
+	return SUCCESS;
+}
+
+static PHP_MINFO_FUNCTION(inletguard)
+{
+	php_info_print_table_start();
+	php_info_print_table_row(2, "InletGuard support", "enabled");
+	php_info_print_table_row(2, "Version", PHP_INLETGUARD_VERSION);
+	php_info_print_table_end();
+}
+
+zend_module_entry inletguard_module_entry = {
+	STANDARD_MODULE_HEADER,
+	PHP_INLETGUARD_EXTNAME,
+	NULL,
+	PHP_MINIT(inletguard),
+	PHP_MSHUTDOWN(inletguard),
+	PHP_RINIT(inletguard),
+	PHP_RSHUTDOWN(inletguard),
+	PHP_MINFO(inletguard),
+	PHP_INLETGUARD_VERSION,
+	STANDARD_MODULE_PROPERTIES
+};
+
+#ifdef COMPILE_DL_INLETGUARD
+#ifdef ZTS
+ZEND_TSRMLS_CACHE_DEFINE()
+#endif
+ZEND_GET_MODULE(inletguard)
+#endif
