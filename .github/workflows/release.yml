@@ -39,14 +39,18 @@ jobs:
     runs-on: ubuntu-24.04
     outputs:
       decision: ${{ steps.check.outputs.decision }}
+    env:
+      REF: ${{ inputs.simulate_ref || github.ref }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - id: check
         name: Publishing policy
         env:
-          REF: ${{ inputs.simulate_ref || github.ref }}
           RELEASES_ENABLED: ${{ vars.RELEASES_ENABLED }}
         run: sh scripts/release/check-policy.sh "$REF" "$RELEASES_ENABLED" >> "$GITHUB_OUTPUT"
+      - name: Version consistency (tag, ig_version.h, CHANGELOG.md, package.xml)
+        if: startsWith(env.REF, 'refs/tags/')
+        run: sh scripts/release/check-version.sh "${REF#refs/tags/}"
 
   build:
     needs: policy
@@ -136,6 +140,7 @@ jobs:
       id-token: write
       attestations: write
     steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: release-bundle
@@ -148,4 +153,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
           TAG: ${{ github.ref_name }}
-        run: gh release create "$TAG" --draft --verify-tag --generate-notes --title "InletGuard $TAG" dist/*
+        run: |
+          sh scripts/release/changelog-notes.sh "${TAG#v}" > "$RUNNER_TEMP/notes.md"
+          gh release create "$TAG" --draft --verify-tag --notes-file "$RUNNER_TEMP/notes.md" \
+            --title "InletGuard $TAG" dist/*

@@ -418,5 +418,12 @@ optional Redis/Memcached.
 - `release.yml`: job `policy` runs first (a rejected tag does not spend 40 builds); job `publish` (`needs: [policy, bundle]`) runs only when allowed, in the **`release` environment** with required maintainer approval and a `v*` tag deployment policy.
 - `publish`: build attestations for all bundle files (only this job gets `id-token`/`attestations`/`contents: write`), then a **draft** release via `gh release create --draft --verify-tag`; the maintainer publishes the draft manually; PECL/Packagist manually in 7.8. Notes: `--generate-notes` until CHANGELOG extraction (0.5f).
 - Testing without public test tags: manual runs accept `simulate_ref` for the policy check only; `publish` requires a real tag in `github.ref`. Replaces the planned `v0.0.0-test` tag, which would be public.
+- Outcome (manual runs on `main`): `simulate_ref=refs/tags/v0.0.0-test` → `policy` fails "before v1.0.0"; `refs/tags/v1.0.0` → "RELEASES_ENABLED is not 'true'"; builds and `publish` skipped. Manual runs on the same ref share a concurrency group and cancel each other — run them one at a time.
 - Tests first: `tests/scripts/test-release-policy.sh` (allowed: `v1.0.0`, `v1.2.3-rc.1` when enabled; rejected: `v0.9.0`, disabled, non-SemVer tags; branch refs → dry run).
+
+### 0.5f Version consistency
+- `scripts/release/check-version.sh <tag>` checks for `vX.Y.Z[-pre]`: `ig_version.h` equals the tag version; no `-dev` suffix; `CHANGELOG.md` has a non-empty `## [X.Y.Z[-pre]] - YYYY-MM-DD` section (Keep a Changelog); `package.xml` `<release>` matches if the file exists (it arrives in 7.7, so it is optional now). Reports all problems, exit 1.
+- `scripts/release/changelog-notes.sh <version>` prints the CHANGELOG section body, used as release notes instead of `--generate-notes`.
+- `release.yml`: version check in the `policy` job for any tag (before builds); `publish` takes notes from CHANGELOG. `CHANGELOG.md` created with `## [Unreleased]`.
+- Tests first: `tests/scripts/test-check-version.sh` with temporary trees (consistent → ok; tag ≠ header, `-dev`, missing/empty CHANGELOG section, mismatching `package.xml` → fail; missing `package.xml` → not checked; notes extraction returns exactly the section body).
 

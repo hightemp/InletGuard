@@ -826,4 +826,21 @@ SEVERITY    = "info" | "low" | "medium" | "high" | "critical" ;
 - Проверка без публичных тестовых тегов: у ручного запуска есть вход `simulate_ref` — политика проверяется для указанного ref, но публикация при ручном запуске невозможна (job `publish` требует настоящий тег в `github.ref`). Это заменяет пункт плана «тестовый тег `v0.0.0-test`» — тег в публичном репозитории был бы виден всем.
 - Окружение `release` создаётся через GitHub API: required reviewer — владелец, deployment policy — теги `v*`.
 
+**Итог (проверено ручными запусками на `main`):** `simulate_ref=refs/tags/v0.0.0-test` → job `policy` падает с «before v1.0.0», `simulate_ref=refs/tags/v1.0.0` → «RELEASES_ENABLED is not 'true'»; сборки и `publish` пропущены. Замечание: ручные запуски на одном ref попадают в одну группу `concurrency` и вытесняют друг друга — запускать по одному (для настоящих тегов не важно: у каждого тега свой ref).
+
 **Тесты (red первыми):** `tests/scripts/test-release-policy.sh`: `v1.0.0`+enabled → разрешено; `v1.2.3-rc.1`+enabled → разрешено; `v0.9.0`+enabled → отказ (pre-1.0); `v1.0.0`+disabled → отказ; `v1.0`, `1.0.0`, `vX` → отказ (не SemVer); `refs/heads/main` → dry run, успех без публикации; вывод сообщает причину.
+
+### 0.5f Согласованность версий
+**Решение:**
+- `scripts/release/check-version.sh <tag>` проверяет для тега `vX.Y.Z[-pre]`:
+  1. версия в `src/core/ig_version.h` (через `version.sh`) равна `X.Y.Z[-pre]`;
+  2. версия не является разработческой (суффикс `-dev` запрещён в релизе);
+  3. в `CHANGELOG.md` есть раздел `## [X.Y.Z[-pre]] - YYYY-MM-DD` (формат Keep a Changelog) с непустым содержимым;
+  4. если есть `package.xml` (появится в 7.7) — его `<release>` равен версии.
+  При любом расхождении — список всех проблем и код 1.
+- `scripts/release/changelog-notes.sh <version>` печатает тело раздела CHANGELOG — это release notes для draft-релиза вместо `--generate-notes`.
+- В `release.yml` проверка версий выполняется в job `policy` для любого тега (до сборок), а `publish` берёт notes из CHANGELOG.
+- `CHANGELOG.md` создаётся сейчас с разделом `## [Unreleased]`.
+- `package.xml` в проверке — опциональный: файла нет до 7.7, а требовать его сейчас значит блокировать задачу на 7.7.
+
+**Тесты (red первыми):** `tests/scripts/test-check-version.sh` — временные деревья с копией скриптов, своими `ig_version.h`, `CHANGELOG.md`, `package.xml`: всё согласовано → успех; тег ≠ заголовок → отказ; `-dev` → отказ; нет раздела CHANGELOG или он пустой → отказ; `package.xml` расходится → отказ, отсутствует → не проверяется; `changelog-notes.sh` возвращает ровно тело раздела.
