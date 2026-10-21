@@ -14,9 +14,9 @@ FUZZ_WORK_DIR ?= work
 FUZZ_SECONDS  ?= 60
 
 ROOT      := ../..
-CFLAGS    := -g -O1 -std=c99 -D_POSIX_C_SOURCE=200809L -I$(ROOT)/src \
+CFLAGS    := -g -O1 -std=c99 -D_POSIX_C_SOURCE=200809L -I$(ROOT)/src -I$(ROOT)/third_party/libinjection \
              -fsanitize=fuzzer,address,undefined -fno-sanitize-recover=undefined
-CORE_SRCS := $(wildcard $(ROOT)/src/core/*.c)
+CORE_SRCS := $(wildcard $(ROOT)/src/core/*.c) $(wildcard $(ROOT)/third_party/libinjection/*.c)
 TARGETS   := $(basename $(notdir $(wildcard $(FUZZ_SRC_DIR)/fuzz_*.c)))
 
 .PHONY: run list clean

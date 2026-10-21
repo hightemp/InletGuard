@@ -16,6 +16,8 @@ on:
       - .github/workflows/release.yml
       - scripts/release/**
       - packaging/**
+      - config.m4
+      - third_party/**
   workflow_dispatch:
     inputs:
       simulate_ref:

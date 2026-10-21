@@ -38,7 +38,7 @@
 - [x] **0.5f [INFRA]** Version consistency check (tag = `ig_version.h` = `CHANGELOG.md` section, no `-dev`, `package.xml` if present) in the `policy` job; release notes from CHANGELOG; `CHANGELOG.md` added.
 - [x] **0.5g [INFRA]** Artifact smoke tests: official images (both arches, NTS/ZTS), Debian 12 + packages.sury.org, AlmaLinux 8/9 + Remi; CentOS 7 via phpt in manylinux2014. FR-13.7 scenario in 7.5a.
 - [ ] **0.6 [INFRA]** clang-format, cppcheck, clang-tidy, `-Werror`. *Partially done (clang-tidy pending).*
-- [ ] **0.7 [INFRA]** Vendor libinjection into `third_party/`.
+- [x] **0.7 [INFRA]** Vendor libinjection into `third_party/`: v4.0.0 (no `abort()` on parser errors), unmodified with SHA256 record, `check-vendor.sh` in CI, lenient flags for vendored code, full license text in `THIRD_PARTY_NOTICES`.
 - [ ] **0.8 [SPIKE]** Input interception via `sapi_register_input_filter` chained with ext/filter → ADR-001.
 - [ ] **0.9 [SPIKE]** Blocking mechanism (stop the script after RINIT) across SAPIs → ADR-002.
 - [ ] **0.10 [SPIKE]** Hooking internal functions and methods, Xdebug compatibility → ADR-003.
