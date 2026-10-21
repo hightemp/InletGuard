@@ -6,8 +6,10 @@
 extern zend_module_entry inletguard_module_entry;
 #define phpext_inletguard_ptr &inletguard_module_entry
 
+#include "core/ig_version.h"
+
 #define PHP_INLETGUARD_EXTNAME "inletguard"
-#define PHP_INLETGUARD_VERSION "0.0.0-dev"
+#define PHP_INLETGUARD_VERSION IG_VERSION
 
 #if defined(ZTS) && defined(COMPILE_DL_INLETGUARD)
 ZEND_TSRMLS_CACHE_EXTERN()

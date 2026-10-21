@@ -12,7 +12,7 @@ PHP_ARG_ENABLE([inletguard-dev],
   [no], [no])
 
 if test "$PHP_INLETGUARD" != "no"; then
-  IG_SOURCES="inletguard.c"
+  IG_SOURCES="inletguard.c src/core/ig_version.c"
 
   IG_CFLAGS="-DZEND_ENABLE_STATIC_TSRMLS_CACHE=1 -std=gnu99"
   if test "$PHP_INLETGUARD_DEV" != "no"; then
@@ -20,6 +20,7 @@ if test "$PHP_INLETGUARD" != "no"; then
   fi
 
   PHP_NEW_EXTENSION(inletguard, $IG_SOURCES, $ext_shared,, $IG_CFLAGS)
+  PHP_ADD_BUILD_DIR([$ext_builddir/src/core])
   PHP_ADD_INCLUDE([$ext_srcdir/src])
   PHP_ADD_MAKEFILE_FRAGMENT
 fi

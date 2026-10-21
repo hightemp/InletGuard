@@ -7,6 +7,25 @@
 #include "php.h"
 #include "ext/standard/info.h"
 #include "php_inletguard.h"
+#include "zend/php_compat.h"
+
+IG_BEGIN_ARG_WITH_RETURN_TYPE_INFO(arginfo_inletguard_version, 0, IS_STRING, 0)
+ZEND_END_ARG_INFO()
+
+/* {{{ InletGuard\version(): string */
+static ZEND_NAMED_FUNCTION(zif_inletguard_version)
+{
+	if (zend_parse_parameters_none() == FAILURE) {
+		return;
+	}
+	RETURN_STRING(ig_version());
+}
+/* }}} */
+
+static const zend_function_entry inletguard_functions[] = {
+	ZEND_NS_NAMED_FE("InletGuard", version, zif_inletguard_version, arginfo_inletguard_version)
+	ZEND_FE_END
+};
 
 static PHP_MINIT_FUNCTION(inletguard)
 {
@@ -42,7 +61,7 @@ static PHP_MINFO_FUNCTION(inletguard)
 zend_module_entry inletguard_module_entry = {
 	STANDARD_MODULE_HEADER,
 	PHP_INLETGUARD_EXTNAME,
-	NULL,
+	inletguard_functions,
 	PHP_MINIT(inletguard),
 	PHP_MSHUTDOWN(inletguard),
 	PHP_RINIT(inletguard),
