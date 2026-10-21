@@ -39,6 +39,14 @@ make
 make test
 ```
 
+By default every attack module is built. To build a subset:
+
+```sh
+./configure --enable-inletguard --with-inletguard-modules=sqli        # only sqli
+./configure --enable-inletguard --with-inletguard-modules=all,-xss    # all but xss
+./configure --enable-inletguard --with-inletguard-modules=none        # PHP API only
+```
+
 Then add to `php.ini` (or a `conf.d` file):
 
 ```ini

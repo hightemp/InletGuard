@@ -13,6 +13,9 @@
 #   --asan         sanitizers for a stock (non-ASan) PHP: dlopen shim + LD_PRELOAD
 #   --asan-native  sanitizers for a PHP built with -fsanitize=address
 #   --valgrind     run-tests -m
+#
+# Extra configure arguments: INLETGUARD_CONFIGURE, e.g.
+#   INLETGUARD_CONFIGURE=--with-inletguard-modules=sqli
 
 set -eu
 
@@ -70,7 +73,8 @@ if [ "$MODE" = "--asan" ] || [ "$MODE" = "--asan-native" ]; then
 	# inside its chunks. Keep the system allocator.
 	sed -i "s/\$env\['USE_ZEND_ALLOC'\] = '1';/\$env['USE_ZEND_ALLOC'] = '0';/" run-tests.php
 fi
-./configure --enable-inletguard $DEV CFLAGS="$CFLAGS" LDFLAGS="$LDFLAGS" >/dev/null
+# shellcheck disable=SC2086
+./configure --enable-inletguard $DEV ${INLETGUARD_CONFIGURE:-} CFLAGS="$CFLAGS" LDFLAGS="$LDFLAGS" >/dev/null
 make -j"$(nproc)" >/dev/null
 
 export NO_INTERACTION=1
