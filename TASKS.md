@@ -44,7 +44,7 @@
 - [x] **0.10 [SPIKE]** Hooking internal functions and methods → ADR-003: handler replacement in the first RINIT (shared extensions register classes only in their MINIT), idempotent per thread under ZTS; 8.4 frameless functions bypass `handler` → clear `frameless_function_infos` in MINIT; OPcache/JIT/Xdebug 2.x/3.x compatible.
 - [x] **0.11 [INFRA]** `README.md`, `CONTRIBUTING.md`.
 - [x] **0.12 [INFRA]** Licensing: MIT `LICENSE`, `THIRD_PARTY_NOTICES`, SPDX headers, CI check.
-- [ ] **0.13 [SPIKE]** Pool/vhost-level configuration visibility in MINIT vs RINIT → ADR-009.
+- [x] **0.13 [SPIKE]** Pool/vhost configuration → ADR-009: pool values only in workers, vhost values per request; 7.0–7.1 `php_value` hole closed by an `OnUpdate` stage guard; startup directives from the global ini only.
 - [ ] **0.14 [INFRA]** Build flags for modules (`--with-inletguard-modules`, `--disable-inletguard-<m>`).
 
 ## Phase 1. Detection core (pure C, no Zend)
@@ -62,7 +62,7 @@
 ## Phase 2. Configuration and modularity
 
 - [ ] **2.1 [TDD]** Register ini directives as `PHP_INI_SYSTEM`.
-- [ ] **2.2 [TDD]** `ini_set()` cannot change protection settings.
+- [ ] **2.2 [TDD]** `ini_set()` cannot change protection settings (ADR-009 stage guard; FPM 7.0/7.1 `php_value` test).
 - [ ] **2.3 [TDD]** Mode parsing and inheritance.
 - [ ] **2.4 [TDD]** List parsing (sources, headers, `source:name` exclusions).
 - [ ] **2.5 [TDD]** Invalid values → default + `config_warning`.
