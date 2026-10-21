@@ -18,7 +18,7 @@ application code.
 - JSON Lines event log.
 - Later releases add more attack classes (LFI/RFI, command and code injection,
   deserialization, XXE, SSRF, ...), a rule language for virtual patching and
-  behavioral protection. See the roadmap in `PRD.md` (Russian).
+  behavioral protection. See the roadmap in `PRD.md`.
 
 ## Supported platforms
 
@@ -69,8 +69,11 @@ docker run --rm -v "$PWD:/src:ro" php:8.4-cli sh /src/scripts/ci/phpt.sh --asan
 
 ## Documentation
 
-- `PRD.md` — product requirements and design notes (Russian).
-- `TASKS.md` — phased implementation plan (Russian).
+- `PRD.md` — product requirements (baseline English version of `PRD.ru.md`).
+- `TASKS.md` — phased implementation plan (baseline English version of
+  `TASKS.ru.md`).
+- `PRD.ru.md`, `TASKS.ru.md` — authoritative Russian versions, including
+  implementation notes.
 - `CONTRIBUTING.md` — development process (test-driven development).
 
 ## License
