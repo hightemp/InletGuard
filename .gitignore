@@ -43,6 +43,9 @@
 /tests/**/*.php
 /tests/**/*.sh
 /tests/**/*.mem
+# ...but not our own test scripts
+!/tests/scripts/
+!/tests/scripts/*.sh
 
 # unit tests
 /tests/unit/ig_unit
