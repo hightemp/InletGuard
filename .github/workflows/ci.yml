@@ -1,0 +1,104 @@
+# SPDX-License-Identifier: MIT
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: clang-format
+        run: git ls-files '*.c' '*.h' | grep -v '^third_party/' | xargs pipx run clang-format==18.1.8 --dry-run --Werror
+      - name: cppcheck (core)
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq cppcheck
+          cppcheck --std=c99 --enable=warning,portability,performance --error-exitcode=1 --inline-suppr -I src src/core
+      - name: license headers
+        run: sh scripts/check-license.sh
+
+  unit:
+    name: unit (${{ matrix.cc }}${{ matrix.sanitize == '1' && ', asan+ubsan' || '' }})
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        cc: [gcc, clang]
+        sanitize: ['0', '1']
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - run: make -C tests/unit CC="$CC" SANITIZE="$SANITIZE"
+        env:
+          CC: ${{ matrix.cc }}
+          SANITIZE: ${{ matrix.sanitize }}
+
+  unit-centos7:
+    name: unit (CentOS 7, gcc 4.8.5)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - run: docker run --rm -v "$PWD:/src:ro" centos:7 sh /src/scripts/ci/unit-centos7.sh
+
+  phpt:
+    name: phpt ${{ matrix.php }}-${{ matrix.variant }}
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        php: ['7.0', '7.1', '7.2', '7.3', '7.4', '8.0', '8.1', '8.2', '8.3', '8.4']
+        variant: [cli, zts]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - run: docker run --rm -v "$PWD:/src:ro" "php:${PHP}-${VARIANT}" sh /src/scripts/ci/phpt.sh
+        env:
+          PHP: ${{ matrix.php }}
+          VARIANT: ${{ matrix.variant }}
+
+  phpt-asan:
+    # 7.x images ship GCC 10, whose ASan runtime cannot be preloaded into the
+    # stock PHP binary; 7.x gets ASan with a sanitizer-built PHP (TASKS 0.5d).
+    name: phpt ${{ matrix.php }} (asan+ubsan)
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        php: ['8.1', '8.4']
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - run: docker run --rm -v "$PWD:/src:ro" "php:${PHP}-cli" sh /src/scripts/ci/phpt.sh --asan
+        env:
+          PHP: ${{ matrix.php }}
+
+  phpt-valgrind:
+    name: phpt 8.4 (valgrind)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - run: >-
+          docker run --rm -v "$PWD:/src:ro" php:8.4-cli sh -c
+          'apt-get update -qq && apt-get install -y -qq valgrind >/dev/null && sh /src/scripts/ci/phpt.sh --valgrind'
+
+  phpt-arm64:
+    name: phpt ${{ matrix.php }} (aarch64)
+    runs-on: ubuntu-24.04-arm
+    strategy:
+      fail-fast: false
+      matrix:
+        php: ['7.0', '8.4']
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - run: docker run --rm -v "$PWD:/src:ro" "php:${PHP}-cli" sh /src/scripts/ci/phpt.sh
+        env:
+          PHP: ${{ matrix.php }}

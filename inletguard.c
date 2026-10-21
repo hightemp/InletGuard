@@ -22,10 +22,12 @@ static ZEND_NAMED_FUNCTION(zif_inletguard_version)
 }
 /* }}} */
 
+/* clang-format off */
 static const zend_function_entry inletguard_functions[] = {
 	ZEND_NS_NAMED_FE("InletGuard", version, zif_inletguard_version, arginfo_inletguard_version)
 	ZEND_FE_END
 };
+/* clang-format on */
 
 static PHP_MINIT_FUNCTION(inletguard)
 {
@@ -58,6 +60,7 @@ static PHP_MINFO_FUNCTION(inletguard)
 	php_info_print_table_end();
 }
 
+/* clang-format off */
 zend_module_entry inletguard_module_entry = {
 	STANDARD_MODULE_HEADER,
 	PHP_INLETGUARD_EXTNAME,
@@ -70,6 +73,7 @@ zend_module_entry inletguard_module_entry = {
 	PHP_INLETGUARD_VERSION,
 	STANDARD_MODULE_PROPERTIES
 };
+/* clang-format on */
 
 #ifdef COMPILE_DL_INLETGUARD
 #ifdef ZTS

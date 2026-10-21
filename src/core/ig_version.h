@@ -12,9 +12,9 @@
 #define IG_STRINGIFY_(x) #x
 #define IG_STRINGIFY(x) IG_STRINGIFY_(x)
 
-#define IG_VERSION                                                             \
-	IG_STRINGIFY(IG_VERSION_MAJOR) "." IG_STRINGIFY(IG_VERSION_MINOR) "."      \
-	IG_STRINGIFY(IG_VERSION_PATCH) IG_VERSION_SUFFIX
+#define IG_VERSION                 \
+	IG_STRINGIFY(IG_VERSION_MAJOR) \
+	"." IG_STRINGIFY(IG_VERSION_MINOR) "." IG_STRINGIFY(IG_VERSION_PATCH) IG_VERSION_SUFFIX
 
 const char *ig_version(void);
 

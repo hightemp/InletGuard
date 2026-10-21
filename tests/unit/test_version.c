@@ -14,7 +14,7 @@ IG_TEST(version_is_built_from_components)
 {
 	char expected[64];
 
-	snprintf(expected, sizeof(expected), "%d.%d.%d%s", IG_VERSION_MAJOR,
-		IG_VERSION_MINOR, IG_VERSION_PATCH, IG_VERSION_SUFFIX);
+	snprintf(expected, sizeof(expected), "%d.%d.%d%s", IG_VERSION_MAJOR, IG_VERSION_MINOR,
+		IG_VERSION_PATCH, IG_VERSION_SUFFIX);
 	IG_ASSERT_STR_EQ(expected, ig_version());
 }

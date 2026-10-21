@@ -16,10 +16,10 @@
  * argument; PHP 7.2+ dropped it.
  */
 #if PHP_VERSION_ID >= 70200
-#define IG_BEGIN_ARG_WITH_RETURN_TYPE_INFO(name, required, type, allow_null)  \
+#define IG_BEGIN_ARG_WITH_RETURN_TYPE_INFO(name, required, type, allow_null) \
 	ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(name, 0, required, type, allow_null)
 #else
-#define IG_BEGIN_ARG_WITH_RETURN_TYPE_INFO(name, required, type, allow_null)  \
+#define IG_BEGIN_ARG_WITH_RETURN_TYPE_INFO(name, required, type, allow_null) \
 	ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(name, 0, required, type, NULL, allow_null)
 #endif
 

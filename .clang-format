@@ -1,0 +1,23 @@
+# SPDX-License-Identifier: MIT
+# Close to the php-src coding style: tabs, braces on new line for functions.
+BasedOnStyle: LLVM
+UseTab: ForContinuationAndIndentation
+IndentWidth: 4
+TabWidth: 4
+ContinuationIndentWidth: 4
+ColumnLimit: 100
+BreakBeforeBraces: Linux
+AllowShortFunctionsOnASingleLine: None
+AllowShortIfStatementsOnASingleLine: Never
+AllowShortBlocksOnASingleLine: Never
+AllowShortLoopsOnASingleLine: false
+AlignAfterOpenBracket: DontAlign
+AlignEscapedNewlines: Left
+AlignTrailingComments: true
+AlwaysBreakAfterReturnType: None
+IndentCaseLabels: false
+PointerAlignment: Right
+SortIncludes: Never
+SpaceBeforeParens: ControlStatements
+MacroBlockBegin: '^ZEND_BEGIN_ARG|^IG_BEGIN_ARG'
+MacroBlockEnd: '^ZEND_END_ARG_INFO'

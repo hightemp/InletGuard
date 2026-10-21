@@ -717,7 +717,7 @@ SEVERITY    = "info" | "low" | "medium" | "high" | "critical" ;
 **Решение:**
 - Один скрипт `scripts/ci/phpt.sh` (сборка `phpize → configure --enable-inletguard-dev → make → make test`) — одинаково запускается в CI и локально: `docker run --rm -v "$PWD:/src:ro" php:8.4-zts sh /src/scripts/ci/phpt.sh`. Исходник монтируется read-only и копируется внутрь контейнера, чтобы артефакты сборки не попадали в рабочую копию.
 - `REPORT_EXIT_STATUS=1` — иначе `run-tests.php` старых версий завершается с кодом 0 даже при падениях; при падении печатаются `.diff`.
-- Jobs: `lint` (clang-format, cppcheck по `src/core`, SPDX/лицензии), `unit` (gcc и clang, обычная и ASan/UBSan сборка ядра), `unit-gcc48` (ядро собирается в образе `gcc:4.8` — проверка C99 на старом компиляторе), `phpt` (матрица 10 версий × `cli`/`zts`), `phpt-asan` (расширение с ASan, `LD_PRELOAD=libasan`, `USE_ZEND_ALLOC=0`, на 7.4 и 8.4), `phpt-valgrind` (8.4, `run-tests -m`), `phpt-arm64` (7.0 и 8.4 на `ubuntu-24.04-arm`).
+- Jobs: `lint` (clang-format, cppcheck по `src/core`, SPDX/лицензии), `unit` (gcc и clang, обычная и ASan/UBSan сборка ядра), `unit-centos7` (ядро собирается GCC 4.8.5 в `centos:7` — проверка C99 на старом компиляторе), `phpt` (матрица 10 версий × `cli`/`zts`), `phpt-asan` (расширение с ASan, `LD_PRELOAD=libasan`, `USE_ZEND_ALLOC=0`, на 8.1 и 8.4 — см. итоги), `phpt-valgrind` (8.4, `run-tests -m`), `phpt-arm64` (7.0 и 8.4 на `ubuntu-24.04-arm`).
 - `concurrency` с отменой устаревших прогонов, `permissions: contents: read`.
 - Actions закреплены по SHA коммита с комментарием версии; Dependabot обновляет `github-actions` еженедельно.
 
@@ -726,6 +726,14 @@ SEVERITY    = "info" | "low" | "medium" | "high" | "critical" ;
 - Сборка *расширения* на GCC 4.8 / glibc 2.17 требует PHP, собранного из исходников в таком окружении — это делается в 0.5d (релизные сборки). Сейчас на GCC 4.8 проверяется только ядро.
 
 **Проверка:** workflow валидируется `actionlint`; реальный прогон — после появления GitHub-репозитория (remote пока не настроен).
+
+**Итоги реализации (отклонения от плана, выяснено при локальном прогоне всех jobs в Docker):**
+- `gcc:4.8` не запускается современным Docker (manifest v1). Заменён на `centos:7` (GCC 4.8.5, glibc 2.17, репозитории с `vault.centos.org`) — это и есть целевая платформа хостингов; скрипт `scripts/ci/unit-centos7.sh`.
+- ASan: штатный PHP загружает расширения с `RTLD_DEEPBIND`, что несовместимо с ASan. Решение — LD_PRELOAD-шим, убирающий флаг в `dlopen()`, без пересборки PHP. Работает на образах 8.1+ (GCC 12+); на 7.x (GCC 10) рантайм ASan не удаётся подгрузить в неинструментированный PHP. **ASan для 7.x переносится в 0.5d** — там PHP всё равно собирается из исходников, добавим вариант с `-fsanitize=address`.
+- В ASan-режиме `-Werror` выключен: заголовки PHP 8.1 переопределяют `__SANITIZE_ADDRESS__` под GCC 14, это предупреждение не отключается флагом. Строгие предупреждения проверяют обычные phpt-jobs.
+- LeakSanitizer выключен (не работает в непривилегированных контейнерах и ломает тестовые программы configure); утечки ловит Valgrind-job.
+- Скрипт чистит in-tree артефакты phpize, чтобы локальный запуск из «грязной» рабочей копии давал тот же результат, что CI.
+- **Негативная проверка:** намеренное переполнение кучи в `InletGuard\version()` роняет и ASan-job (`heap-buffer-overflow`), и Valgrind-job (`LEAKED`/invalid write) — jobs не «зелёные вхолостую». Первая версия ловушки (`emalloc(4)`, запись в `p[4]`) не сработала: константный размер попадает в 8-байтовый класс аллокатора — ловушка должна использовать динамический размер.
 
 ### 0.6 Линтеры
 - `.clang-format`: стиль PHP-исходников (табы шириной 4, скобки функций на новой строке, лимит 100 колонок). Версия clang-format закреплена (`clang-format==18.1.8` из PyPI) — разные версии форматируют по-разному.
