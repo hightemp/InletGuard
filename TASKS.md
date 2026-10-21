@@ -39,7 +39,7 @@
 - [x] **0.5g [INFRA]** Artifact smoke tests: official images (both arches, NTS/ZTS), Debian 12 + packages.sury.org, AlmaLinux 8/9 + Remi; CentOS 7 via phpt in manylinux2014. FR-13.7 scenario in 7.5a.
 - [ ] **0.6 [INFRA]** clang-format, cppcheck, clang-tidy, `-Werror`. *Partially done (clang-tidy pending).*
 - [x] **0.7 [INFRA]** Vendor libinjection into `third_party/`: v4.0.0 (no `abort()` on parser errors), unmodified with SHA256 record, `check-vendor.sh` in CI, lenient flags for vendored code, full license text in `THIRD_PARTY_NOTICES`.
-- [ ] **0.8 [SPIKE]** Input interception via `sapi_register_input_filter` chained with ext/filter → ADR-001.
+- [x] **0.8 [SPIKE]** Input interception via `sapi_register_input_filter` chained with ext/filter → ADR-001 (GET/POST/COOKIE via the filter; headers and URI from `$_SERVER` in RINIT; request state reset in `input_filter_init`).
 - [ ] **0.9 [SPIKE]** Blocking mechanism (stop the script after RINIT) across SAPIs → ADR-002.
 - [ ] **0.10 [SPIKE]** Hooking internal functions and methods, Xdebug compatibility → ADR-003.
 - [x] **0.11 [INFRA]** `README.md`, `CONTRIBUTING.md`.
@@ -105,9 +105,9 @@
 ## Phase 4. Request input inspection
 
 - [ ] **4.1 [TDD]** SQLi in GET logged in `monitor` mode.
-- [ ] **4.2 [TDD]** POST, COOKIE, URI path, query string.
+- [ ] **4.2 [TDD]** POST, COOKIE, URI path, query string (URI from `$_SERVER` in RINIT, ADR-001).
 - [ ] **4.3 [TDD]** Multipart: text fields only.
-- [ ] **4.4 [TDD]** Selected headers.
+- [ ] **4.4 [TDD]** Selected headers (from `$_SERVER` in RINIT, ADR-001).
 - [ ] **4.5 [TDD]** Keys and nested arrays, depth limit.
 - [ ] **4.6 [TDD]** Length/count limits → `limit_exceeded`.
 - [ ] **4.7 [TDD]** `block`: status code, script does not run.
