@@ -33,7 +33,7 @@
 - [x] **0.5a [TDD]** Compatibility layer `src/zend/php_compat.h` (the only place for `PHP_VERSION_ID`): foundation + CI check; wrappers come with the tasks that need them.
 - [x] **0.5b [INFRA]** CI hygiene: SHA-pinned actions, Dependabot, PR template, `main` protection (PR + required `ci-ok` check). Digest-pinned images moved to 0.5d.
 - [x] **0.5c [INFRA]** `nightly.yml`: scheduled full CI + auto-discovering fuzz harness (tested with temporary targets); corpora and benchmarks join in 1.8 and 7.3.
-- [ ] **0.5d [INFRA]** `release.yml` in dry-run: 40 `.so` builds on glibc 2.17, archives, PECL package, checksums, attestations.
+- [x] **0.5d [INFRA]** `release.yml` in dry-run: 40 `.so` builds on glibc 2.17 against verified PHP sources, phpt per build, archives, source tarball, checksums. PECL package → 7.7, attestations → 0.5e, 7.x ASan → follow-up PR.
 - [ ] **0.5e [INFRA]** Publishing locks: `RELEASES_ENABLED` + tag `≥ v1.0.0`, draft releases with approval.
 - [ ] **0.5f [INFRA]** Version consistency check (tag, header, `package.xml`, `CHANGELOG.md`).
 - [ ] **0.5g [INFRA]** Artifact smoke tests on CentOS 7, AlmaLinux 8–9, Debian, Ubuntu.

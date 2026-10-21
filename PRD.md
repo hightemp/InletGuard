@@ -396,3 +396,14 @@ optional Redis/Memcached.
 - Accuracy corpora and benchmarks join in 1.8 and 7.3 together with their runners (YAGNI).
 - Tests first: `tests/scripts/test-fuzz-harness.sh` checks the harness itself with temporary targets (no targets → success; safe target → success; buggy target with the crashing input in its seed corpus → failure and a `crash-*` file). Runs in the CI `lint` job.
 
+### 0.5d `release.yml` dry-run
+- Build environment: `quay.io/pypa/manylinux2014_{x86_64,aarch64}` (CentOS 7, glibc 2.17, gcc 10), pinned by digest; aarch64 on ARM runners.
+- PHP built from source, minimal (`--disable-all`); ZTS flag `--enable-maintainer-zts` on 7.x, `--enable-zts` on 8.x; `CFLAGS=-fcommon` for old PHP with gcc 10.
+- PHP versions and tarball SHA256 pinned in `scripts/release/php-versions.txt` and verified before building. Patch level does not change the extension ABI within a branch.
+- Built PHP is cached per version × variant × arch × script hash.
+- Each build: extension against its PHP → phpt with the same PHP → archive `inletguard-<ver>-php<X.Y>-<nts|zts>-<arch>-linux-gnu.tar.gz` (`.so`, `20-inletguard.ini`, `README.md`, `LICENSE`, `THIRD_PARTY_NOTICES`).
+- A final job bundles all archives, a source tarball and `SHA256SUMS` as a 7-day workflow artifact. **No publishing step exists** (comes with the locks in 0.5e).
+- Deviations: PECL `package.xml` moves to 7.7 (maintainer metadata, file list); attestations only on real releases (they write to the public Sigstore log); no digest pins for the CI `php:*` matrix (nightly catches drift, EOL tags are frozen, Dependabot cannot bump matrix images) — release build images are pinned.
+- `packaging/20-inletguard.ini` is a one-liner for now (full version in 2.22). 7.x ASan follows in a separate PR using the same `build-php.sh` with `-fsanitize=address`.
+- Tests first: `tests/scripts/test-release-scripts.sh` checks `version.sh`, the versions file (exactly branches 7.0–8.4, matching versions, 64-char SHA256) and `package.sh` (archive name and exact file set on a dummy `.so`). The full PHP build is verified locally in a manylinux container (7.0 and 8.4, NTS and ZTS) and then by the workflow.
+

@@ -1,0 +1,106 @@
+# SPDX-License-Identifier: MIT
+#
+# Release pipeline (PRD 9.2). Until v1.0.0 it only runs as a dry run: it
+# builds, tests and packages every artifact and keeps them as short-lived
+# workflow artifacts. There is no publishing step yet (TASKS 0.5e).
+name: Release
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+    # Not a required check, so path filters are fine here.
+    paths:
+      - .github/workflows/release.yml
+      - scripts/release/**
+      - packaging/**
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # manylinux2014: CentOS 7, glibc 2.17, gcc 10 (NFR-11).
+  MANYLINUX_X86_64: quay.io/pypa/manylinux2014_x86_64@sha256:55df5597db86b0a03d5f21a03b060271efffc78ef97123c60ee9c7ce0f10ec31
+  MANYLINUX_AARCH64: quay.io/pypa/manylinux2014_aarch64@sha256:652a519c4425c720cffd07e8e4aa716b7fefc0600031eb72d1f5dac29f71d342
+
+jobs:
+  build:
+    name: build php${{ matrix.php }}-${{ matrix.variant }}-${{ matrix.arch }}
+    runs-on: ${{ matrix.arch == 'aarch64' && 'ubuntu-24.04-arm' || 'ubuntu-24.04' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        php: ['7.0', '7.1', '7.2', '7.3', '7.4', '8.0', '8.1', '8.2', '8.3', '8.4']
+        variant: [nts, zts]
+        arch: [x86_64, aarch64]
+    env:
+      PHP: ${{ matrix.php }}
+      VARIANT: ${{ matrix.variant }}
+      ARCH: ${{ matrix.arch }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Select build image
+        run: |
+          if [ "$ARCH" = aarch64 ]; then image=$MANYLINUX_AARCH64; else image=$MANYLINUX_X86_64; fi
+          echo "IMAGE=$image" >> "$GITHUB_ENV"
+
+      - name: Cache built PHP
+        id: php-cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ runner.temp }}/php-${{ matrix.php }}-${{ matrix.variant }}
+          key: php-${{ matrix.php }}-${{ matrix.variant }}-${{ matrix.arch }}-${{ hashFiles('scripts/release/build-php.sh', 'scripts/release/php-versions.txt') }}
+
+      - name: Build PHP from verified sources
+        if: steps.php-cache.outputs.cache-hit != 'true'
+        run: |
+          tarball=$(sh scripts/release/fetch-php.sh "$PHP" "$RUNNER_TEMP/php-src")
+          docker run --rm -v "$PWD:/src:ro" -v "$RUNNER_TEMP:/work" "$IMAGE" \
+            sh /src/scripts/release/build-php.sh "/work/php-src/$(basename "$tarball")" "$VARIANT" "/work/php-$PHP-$VARIANT"
+
+      - name: Build, test and package the extension
+        run: |
+          mkdir -p "$RUNNER_TEMP/dist"
+          docker run --rm -v "$PWD:/src:ro" -v "$RUNNER_TEMP:/work" "$IMAGE" \
+            sh /src/scripts/release/build-ext.sh "/work/php-$PHP-$VARIANT" "$PHP" "$VARIANT" "$ARCH" /work/dist
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: build-php${{ matrix.php }}-${{ matrix.variant }}-${{ matrix.arch }}
+          path: ${{ runner.temp }}/dist/*.tar.gz
+          retention-days: 7
+          if-no-files-found: error
+
+  bundle:
+    needs: build
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: build-*
+          merge-multiple: true
+          path: dist
+      - name: Source tarball and checksums
+        run: |
+          version=$(sh scripts/release/version.sh)
+          count=$(find dist -name '*.tar.gz' | wc -l)
+          if [ "$count" -ne 40 ]; then
+            echo "expected 40 binary archives, got $count"
+            exit 1
+          fi
+          git archive --prefix="inletguard-$version/" -o "dist/inletguard-$version.tar.gz" HEAD
+          (cd dist && sha256sum -- *.tar.gz > SHA256SUMS && cat SHA256SUMS)
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: release-bundle
+          path: dist/
+          retention-days: 7
+          if-no-files-found: error
