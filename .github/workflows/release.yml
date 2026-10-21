@@ -128,8 +128,42 @@ jobs:
           retention-days: 7
           if-no-files-found: error
 
+  smoke:
+    # Real PHP builds from several distributions load every archive
+    # (TASKS 0.5g). CentOS 7 is covered by the phpt run inside manylinux2014.
+    needs: bundle
+    name: smoke ${{ matrix.name }}
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: official images (x86_64)
+            runner: ubuntu-24.04
+            run: sh scripts/release/smoke-official.sh dist 7.0 7.1 7.2 7.3 7.4 8.0 8.1 8.2 8.3 8.4
+          - name: official images (aarch64)
+            runner: ubuntu-24.04-arm
+            run: sh scripts/release/smoke-official.sh dist 7.0 7.1 7.2 7.3 7.4 8.0 8.1 8.2 8.3 8.4
+          - name: debian 12 + packages.sury.org
+            runner: ubuntu-24.04
+            run: docker run --rm -v "$PWD:/src:ro" -v "$PWD/dist:/dist:ro" debian:12 sh /src/scripts/release/smoke-debian-sury.sh /dist 7.0 7.1 7.2 7.3 7.4 8.0 8.1 8.2 8.3 8.4
+          - name: almalinux 8 + remi
+            runner: ubuntu-24.04
+            run: docker run --rm -v "$PWD:/src:ro" -v "$PWD/dist:/dist:ro" almalinux:8 sh /src/scripts/release/smoke-remi.sh /dist 7.2 7.3 7.4 8.0 8.1 8.2 8.3 8.4
+          - name: almalinux 9 + remi
+            runner: ubuntu-24.04
+            run: docker run --rm -v "$PWD:/src:ro" -v "$PWD/dist:/dist:ro" almalinux:9 sh /src/scripts/release/smoke-remi.sh /dist 7.4 8.0 8.1 8.2 8.3 8.4
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: release-bundle
+          path: dist
+      - name: Smoke test
+        run: ${{ matrix.run }}
+
   publish:
-    needs: [policy, bundle]
+    needs: [policy, bundle, smoke]
     # Two independent locks: the policy decision and a real tag ref (manual
     # runs with simulate_ref can never publish).
     if: needs.policy.outputs.decision == 'publish' && startsWith(github.ref, 'refs/tags/v')

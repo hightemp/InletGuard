@@ -430,7 +430,8 @@ optional Redis/Memcached.
 ### 0.5g Artifact smoke tests
 - Verified sources: `ondrej/php` PPA on Ubuntu 24.04 (7.0–8.4), Remi on AlmaLinux 8 (7.2–8.4) and 9 (7.4–8.4), official `php:*-cli|zts` images (all branches, both arches).
 - `scripts/release/smoke.sh <php> <archive-dir>`: asks that PHP for branch, ZTS and arch, picks exactly one matching archive, checks that `php -n -d extension=<.so>` loads it with the right `InletGuard\version()`, and that the packaged `20-inletguard.ini` works too. Missing/ambiguous archive or wrong version → failure.
-- `smoke` jobs in `release.yml` after `bundle`: official images (cli + zts, both arches), `ubuntu24-sury` (10 branches), `alma8-remi`, `alma9-remi`. CentOS 7 is covered by the phpt run inside `manylinux2014` during every build. The out-of-the-box scenario (FR-13.7) joins in 7.5a.
+- `smoke` jobs in `release.yml` after `bundle`: official images (cli + zts, both arches), `debian12-sury` (10 branches), `alma8-remi`, `alma9-remi`. CentOS 7 is covered by the phpt run inside `manylinux2014` during every build. The out-of-the-box scenario (FR-13.7) joins in 7.5a.
 - Waiting on runs now uses `gh run view --json conclusion` instead of the `gh run watch` exit code (unreliable for finished runs; caused a false alarm on PR #7).
+- Local run on the dry-run bundle: official x86_64 images 20/20, Debian 12 + `packages.sury.org` 10/10, AlmaLinux 8 + Remi 8/8, AlmaLinux 9 + Remi 6/6. The Launchpad `ondrej/php` PPA returned 503 twice and announces its move to `packages.sury.org`, so Debian 12 + `packages.sury.org` (same builds, canonical source) replaces Ubuntu + PPA, with apt retries and CLI-only installs.
 - Tests first: `tests/scripts/test-smoke.sh` with a stub `php` and fake archives (correct archive selected; none/two matching → failure; wrong version → failure; packaged ini path exercised).
 
