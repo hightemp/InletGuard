@@ -1,0 +1,42 @@
+# SPDX-License-Identifier: MIT
+name: Nightly
+
+on:
+  schedule:
+    - cron: '17 3 * * *'
+  workflow_dispatch:
+    inputs:
+      fuzz_seconds:
+        description: Seconds to fuzz each target
+        default: '300'
+        required: false
+
+permissions:
+  contents: read
+
+jobs:
+  # Full CI on schedule: catches drift of unpinned image tags early.
+  ci:
+    uses: ./.github/workflows/ci.yml
+
+  fuzz:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Restore working corpus
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: tests/fuzz/work/corpus
+          key: fuzz-corpus-${{ github.run_id }}
+          restore-keys: fuzz-corpus-
+      - name: Fuzz all targets
+        run: make -C tests/fuzz run FUZZ_SECONDS="$FUZZ_SECONDS"
+        env:
+          FUZZ_SECONDS: ${{ inputs.fuzz_seconds || '300' }}
+      - name: Upload crash inputs
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: fuzz-artifacts
+          path: tests/fuzz/work/artifacts
+          if-no-files-found: ignore

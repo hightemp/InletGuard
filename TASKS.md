@@ -32,7 +32,7 @@
 - [x] **0.5 [INFRA]** `ci.yml`: phpt matrix 7.0–8.4 × NTS/ZTS, ASan, Valgrind, old toolchain, aarch64 (7.x ASan moved to 0.5d).
 - [x] **0.5a [TDD]** Compatibility layer `src/zend/php_compat.h` (the only place for `PHP_VERSION_ID`): foundation + CI check; wrappers come with the tasks that need them.
 - [x] **0.5b [INFRA]** CI hygiene: SHA-pinned actions, Dependabot, PR template, `main` protection (PR + required `ci-ok` check). Digest-pinned images moved to 0.5d.
-- [ ] **0.5c [INFRA]** `nightly.yml`: fuzzing, corpus metrics, benchmarks.
+- [x] **0.5c [INFRA]** `nightly.yml`: scheduled full CI + auto-discovering fuzz harness (tested with temporary targets); corpora and benchmarks join in 1.8 and 7.3.
 - [ ] **0.5d [INFRA]** `release.yml` in dry-run: 40 `.so` builds on glibc 2.17, archives, PECL package, checksums, attestations.
 - [ ] **0.5e [INFRA]** Publishing locks: `RELEASES_ENABLED` + tag `≥ v1.0.0`, draft releases with approval.
 - [ ] **0.5f [INFRA]** Version consistency check (tag, header, `package.xml`, `CHANGELOG.md`).

@@ -388,3 +388,11 @@ optional Redis/Memcached.
 - A grep script rather than a clang-tidy/cppcheck rule: the check is by macro name and file path, needs no PHP headers.
 - Tests first: `tests/scripts/test-check-compat.sh` builds temporary trees (clean tree passes; a version check in another file fails and names it; mentions in comments count too; `third_party/` is ignored).
 - Outcome: the first CI run failed because the test script was never committed — the `.gitignore` rule `/tests/**/*.sh` (run-tests.php output) silently hid `tests/scripts/*.sh`. Fixed with `!/tests/scripts/`; the branch was rebuilt so the red commit really contains the test. Process lesson: check `git status --ignored` for new files before pushing. `ci-ok` correctly failed after `lint`.
+
+### 0.5c `nightly.yml`
+- No fuzz targets, corpora or benchmarks exist yet, so the nightly is a skeleton with **auto-discovery**: later tasks only add files.
+- Job `ci`: the full `ci.yml` via `workflow_call`, catching drift of unpinned image tags. `ci.yml` concurrency becomes `${{ github.workflow }}-${{ github.ref }}` so a nightly call and a push to `main` do not cancel each other.
+- Job `fuzz`: `tests/fuzz/Makefile` discovers `fuzz_*.c`, builds each with clang `-fsanitize=fuzzer,address,undefined` plus the core sources and runs it for `FUZZ_SECONDS` (300 nightly, configurable on manual runs). Seed corpus in `tests/fuzz/corpus/<target>/`, working corpus kept with `actions/cache`, crashes uploaded as artifacts. With no targets it prints "no fuzz targets yet" and passes.
+- Accuracy corpora and benchmarks join in 1.8 and 7.3 together with their runners (YAGNI).
+- Tests first: `tests/scripts/test-fuzz-harness.sh` checks the harness itself with temporary targets (no targets → success; safe target → success; buggy target with the crashing input in its seed corpus → failure and a `crash-*` file). Runs in the CI `lint` job.
+

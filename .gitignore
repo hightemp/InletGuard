@@ -52,3 +52,6 @@
 
 # release packaging
 /dist/
+
+# fuzzing work directory
+/tests/fuzz/work/
