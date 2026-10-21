@@ -6,12 +6,15 @@ on:
     branches: [main]
   pull_request:
   workflow_dispatch:
+  workflow_call:
 
 permissions:
   contents: read
 
+# github.workflow is the caller's name when called from nightly.yml, so a
+# nightly run and a push to main never cancel each other.
 concurrency:
-  group: ci-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -31,7 +34,9 @@ jobs:
       - name: version checks only in php_compat.h
         run: sh scripts/check-compat.sh
       - name: tests for CI scripts
-        run: sh tests/scripts/test-check-compat.sh
+        run: |
+          sh tests/scripts/test-check-compat.sh
+          sh tests/scripts/test-fuzz-harness.sh
 
   unit:
     name: unit (${{ matrix.cc }}${{ matrix.sanitize == '1' && ', asan+ubsan' || '' }})
