@@ -413,3 +413,10 @@ optional Redis/Memcached.
 - Check: phpt green locally; the heap-overflow trap fails the run on 7.0 and 7.4.
 - Outcome: on 7.0 the trap first went **undetected** although a direct `php` run caught it — `run-tests.php` of PHP 7.0–7.3 forces `USE_ZEND_ALLOC=1` for test processes unless `-m` is given, and ASan cannot see overflows inside Zend allocator chunks. In ASan modes `phpt.sh` now patches its copy of `run-tests.php` to keep `USE_ZEND_ALLOC=0`; the trap then fires on 7.0 and 7.4, regular `--asan` on 8.4 stays green. Lesson: verify every sanitizer job with a trap on every version.
 
+### 0.5e Publishing locks
+- Policy lives in `scripts/release/check-policy.sh <ref> <releases_enabled>` (testable, unlike YAML expressions). Publishing requires **all** of: a SemVer tag ref `refs/tags/vX.Y.Z[-pre]`; major ≥ 1 (`v0.*` tags are rejected with an error); repository variable `RELEASES_ENABLED=true` (enabled in 7.8). Non-tag refs → "dry run, nothing to publish", success.
+- `release.yml`: job `policy` runs first (a rejected tag does not spend 40 builds); job `publish` (`needs: [policy, bundle]`) runs only when allowed, in the **`release` environment** with required maintainer approval and a `v*` tag deployment policy.
+- `publish`: build attestations for all bundle files (only this job gets `id-token`/`attestations`/`contents: write`), then a **draft** release via `gh release create --draft --verify-tag`; the maintainer publishes the draft manually; PECL/Packagist manually in 7.8. Notes: `--generate-notes` until CHANGELOG extraction (0.5f).
+- Testing without public test tags: manual runs accept `simulate_ref` for the policy check only; `publish` requires a real tag in `github.ref`. Replaces the planned `v0.0.0-test` tag, which would be public.
+- Tests first: `tests/scripts/test-release-policy.sh` (allowed: `v1.0.0`, `v1.2.3-rc.1` when enabled; rejected: `v0.9.0`, disabled, non-SemVer tags; branch refs → dry run).
+

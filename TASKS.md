@@ -34,7 +34,7 @@
 - [x] **0.5b [INFRA]** CI hygiene: SHA-pinned actions, Dependabot, PR template, `main` protection (PR + required `ci-ok` check). Digest-pinned images moved to 0.5d.
 - [x] **0.5c [INFRA]** `nightly.yml`: scheduled full CI + auto-discovering fuzz harness (tested with temporary targets); corpora and benchmarks join in 1.8 and 7.3.
 - [x] **0.5d [INFRA]** `release.yml` in dry-run: 40 `.so` builds on glibc 2.17 against verified PHP sources, phpt per build, archives, source tarball, checksums. PECL package → 7.7, attestations → 0.5e, 7.x ASan → follow-up PR.
-- [ ] **0.5e [INFRA]** Publishing locks: `RELEASES_ENABLED` + tag `≥ v1.0.0`, draft releases with approval.
+- [x] **0.5e [INFRA]** Publishing locks: tested `check-policy.sh`, `policy` job before builds, `publish` job (attestations + draft release) only for an allowed real tag in the `release` environment (owner approval, `v*` tags only); `simulate_ref` instead of a public test tag.
 - [ ] **0.5f [INFRA]** Version consistency check (tag, header, `package.xml`, `CHANGELOG.md`).
 - [ ] **0.5g [INFRA]** Artifact smoke tests on CentOS 7, AlmaLinux 8–9, Debian, Ubuntu.
 - [ ] **0.6 [INFRA]** clang-format, cppcheck, clang-tidy, `-Werror`. *Partially done (clang-tidy pending).*
