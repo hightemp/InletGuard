@@ -6,12 +6,13 @@
   messages, `README.md`, `docs/` and ADRs are written in **English**.
 - `PRD.ru.md` and `TASKS.ru.md` are written in Russian and are the
   authoritative versions. `PRD.md` and `TASKS.md` are baseline English
-  versions that follow them section by section.
+  versions. **Every change goes into both files of a pair** in the same
+  commit (the English one may be shorter, never stale).
 
 ## Workflow
 
 1. Pick a task from `TASKS.md` (full descriptions in `TASKS.ru.md`).
-2. **Think first.** Write an implementation note in `PRD.ru.md`, section 13:
+2. **Think first.** Write an implementation note in `PRD.ru.md` and `PRD.md`, section 13:
    the chosen approach, rejected alternatives and the test plan. Do not start
    coding before the note exists.
 3. Follow test-driven development for every `[TDD]` task:
