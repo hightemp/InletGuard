@@ -34,7 +34,7 @@
 - [x] **0.5g [INFRA]** Smoke-тесты артефактов: каждый `.so` загружается (`php -d extension=… -m`) в чистых контейнерах CentOS 7 / AlmaLinux 8–9 / Debian / Ubuntu с соответствующей версией PHP; на пустом расширении — проверка загрузки и `InletGuard\version()`, позже — сценарий FR-13.7 (задача 7.5a). *Сделано: `smoke.sh` (тесты с заглушкой `php`) + jobs `smoke` в `release.yml`: официальные образы (x86_64, aarch64, NTS/ZTS), Debian 12 + `packages.sury.org`, AlmaLinux 8/9 + Remi; CentOS 7 покрыт phpt внутри manylinux2014. Ubuntu + PPA заменён на Debian 12 + `packages.sury.org` (PPA нестабилен и переезжает). Сценарий FR-13.7 — в 7.5a.*
 - [ ] **0.6 [INFRA]** `.clang-format`, `clang-tidy`/`cppcheck` в CI, `-Wall -Wextra -Werror`. *Частично: clang-format, cppcheck, `-Werror` (через `--enable-inletguard-dev`) готовы; `clang-tidy` — после появления кода ядра в фазе 1.*
 - [x] **0.7 [INFRA]** Вендоринг libinjection в `third_party/libinjection/` (зафиксированная версия, LICENSE), подключение к сборке. *Сделано: libinjection **v4.0.0** (активный upstream `libinjection/libinjection`, без `abort()` при ошибках парсера), файлы без изменений + `README.inletguard.md` с SHA256, `vendor-libinjection.sh`, `check-vendor.sh` в CI, отдельные мягкие флаги для чужого кода, полный текст лицензии в `THIRD_PARTY_NOTICES`.*
-- [ ] **0.8 [SPIKE]** Перехват входных данных через `sapi_register_input_filter` с цепочкой к ext/filter: убедиться, что `filter_input()` продолжает работать — **на 7.0 и 8.4**. → ADR-001.
+- [x] **0.8 [SPIKE]** Перехват входных данных через `sapi_register_input_filter` с цепочкой к ext/filter: убедиться, что `filter_input()` продолжает работать — **на 7.0 и 8.4**. → ADR-001. *Сделано: ADR-001 — GET/POST/COOKIE через фильтр в цепочке с ext/filter; заголовки и URI — из `$_SERVER` в RINIT; состояние запроса сбрасывается в `input_filter_init`.*
 - [ ] **0.9 [SPIKE]** Механизм блокировки: прекратить выполнение скрипта после RINIT с отдачей 403 и тела (варианты: hook `zend_compile_file`, `zend_execute_ex`, `zend_bailout`) в FPM, CGI, mod_php, LSAPI — **на 7.0 и 8.4**. Observer API (8.0+) не используем, т.к. его нет в 7.x. → ADR-002.
 - [ ] **0.10 [SPIKE]** Перехват internal-функций и методов (`PDO::query`, `mysqli_query`): подмена handler, порядок загрузки расширений, совместимость с Xdebug 2.x (7.x) и 3.x (8.x). → ADR-003.
 - [x] **0.11 [INFRA]** `README.md` **на английском** (описание, поддерживаемые версии PHP 7.0–8.4, сборка, установка, быстрый старт, запуск тестов); `CONTRIBUTING.md` (на английском) с описанием TDD-процесса и языковых соглашений.
@@ -116,9 +116,9 @@
 ## Фаза 4. Проверка входных данных запроса
 
 - [ ] **4.1 [TDD]** phpt `--GET--` с SQLi при `mode=monitor`: скрипт выполняется, в логе событие `source:get, attack_type:sqli`. (FR-1.1, FR-4.1)
-- [ ] **4.2 [TDD]** Аналогично для POST (urlencoded), COOKIE, URI path, query string.
+- [ ] **4.2 [TDD]** Аналогично для POST (urlencoded), COOKIE, URI path, query string. По ADR-001: URI — из `$_SERVER` в RINIT.
 - [ ] **4.3 [TDD]** POST multipart: проверяются текстовые поля, файлы — нет.
-- [ ] **4.4 [TDD]** Заголовки из `inspect_headers` (phpt с `--ENV--` HTTP_USER_AGENT).
+- [ ] **4.4 [TDD]** Заголовки из `inspect_headers` (phpt с `--ENV--` HTTP_USER_AGENT). По ADR-001: читаются в RINIT из принудительно материализованного `$_SERVER`, не через input filter.
 - [ ] **4.5 [TDD]** Ключи и вложенные массивы `a[<script>][x]=...`; лимит `inspect_max_depth`. (FR-1.2)
 - [ ] **4.6 [TDD]** Лимиты `inspect_max_len`, `inspect_max_vars` → событие `limit_exceeded`. (FR-1.4)
 - [ ] **4.7 [TDD]** `mode=block`: статус `block_status`/`<m>.block_status`, код скрипта **не выполняется** (маркер-вывод отсутствует). (FR-4.2) — по ADR-002.
