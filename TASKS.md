@@ -41,7 +41,7 @@
 - [x] **0.7 [INFRA]** Vendor libinjection into `third_party/`: v4.0.0 (no `abort()` on parser errors), unmodified with SHA256 record, `check-vendor.sh` in CI, lenient flags for vendored code, full license text in `THIRD_PARTY_NOTICES`.
 - [x] **0.8 [SPIKE]** Input interception via `sapi_register_input_filter` chained with ext/filter → ADR-001 (GET/POST/COOKIE via the filter; headers and URI from `$_SERVER` in RINIT; request state reset in `input_filter_init`).
 - [x] **0.9 [SPIKE]** Blocking mechanism → ADR-002: `zend_compile_file` wrapper installed in the first RINIT (after OPcache) + `zend_bailout()` on the first compile of a blocked request; RINIT variants kill FPM workers, a MINIT hook is bypassed by OPcache.
-- [ ] **0.10 [SPIKE]** Hooking internal functions and methods, Xdebug compatibility → ADR-003.
+- [x] **0.10 [SPIKE]** Hooking internal functions and methods → ADR-003: handler replacement in the first RINIT (shared extensions register classes only in their MINIT), idempotent per thread under ZTS; 8.4 frameless functions bypass `handler` → clear `frameless_function_infos` in MINIT; OPcache/JIT/Xdebug 2.x/3.x compatible.
 - [x] **0.11 [INFRA]** `README.md`, `CONTRIBUTING.md`.
 - [x] **0.12 [INFRA]** Licensing: MIT `LICENSE`, `THIRD_PARTY_NOTICES`, SPDX headers, CI check.
 - [ ] **0.13 [SPIKE]** Pool/vhost-level configuration visibility in MINIT vs RINIT → ADR-009.
@@ -170,7 +170,7 @@
 
 - [ ] **8.1 [SPIKE]** Cost of hundreds of hooks → ADR-004.
 - [ ] **8.2 [TDD]** User input registry (taint-lite, Aho–Corasick).
-- [ ] **8.3 [TDD]** Declarative sink registry and single hook dispatcher.
+- [ ] **8.3 [TDD]** Declarative sink registry and single hook dispatcher (ADR-003: O(1) original lookup, frameless handling).
 - [ ] **8.4 [INFRA]** Module template and generator.
 - [ ] **8.5 [TDD]** JSON body inspection.
 - [ ] **8.6 [TDD]** XML and raw body inspection.
@@ -232,7 +232,7 @@
 - [ ] **12.2 [TDD]** XPath tokenizer and sinks.
 - [ ] **12.3 [TDD]** NoSQL operator injection, MongoDB sinks.
 - [ ] **12.4 [TDD]** SSTI heuristics.
-- [ ] **12.5 [TDD]** ReDoS / regex injection.
+- [ ] **12.5 [TDD]** ReDoS / regex injection (`preg_match`/`preg_replace` are frameless on 8.4+, ADR-003).
 - [ ] **12.6 [TDD]** CRLF and email header injection.
 - [ ] **12.7 [TDD]** Open redirect.
 - [ ] **12.8 [TDD]** Variable overwrite (`extract`, `parse_str`).
