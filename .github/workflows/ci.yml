@@ -78,7 +78,7 @@ jobs:
 
   phpt-asan:
     # 7.x images ship GCC 10, whose ASan runtime cannot be preloaded into the
-    # stock PHP binary; 7.x gets ASan with a sanitizer-built PHP (TASKS 0.5d).
+    # stock PHP binary; 7.x is covered by phpt-asan-php7 below.
     name: phpt ${{ matrix.php }} (asan+ubsan)
     runs-on: ubuntu-24.04
     strategy:
@@ -90,6 +90,35 @@ jobs:
       - run: docker run --rm -v "$PWD:/src:ro" "php:${PHP}-cli" sh /src/scripts/ci/phpt.sh --asan
         env:
           PHP: ${{ matrix.php }}
+
+  phpt-asan-php7:
+    # PHP built from source with -fsanitize=address loads extensions without
+    # RTLD_DEEPBIND, so no shim is needed. PHP itself gets ASan only: UBSan
+    # reports undefined behavior inside PHP 7.x that is not ours.
+    name: phpt ${{ matrix.php }} (asan, sanitizer-built PHP)
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        php: ['7.0', '7.4']
+    env:
+      PHP: ${{ matrix.php }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Cache ASan PHP
+        id: php-cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ runner.temp }}/php-asan
+          key: php-asan-${{ matrix.php }}-${{ runner.os }}-${{ env.ImageOS }}-${{ hashFiles('scripts/release/build-php.sh', 'scripts/release/php-versions.txt') }}
+      - name: Build PHP with ASan
+        if: steps.php-cache.outputs.cache-hit != 'true'
+        run: |
+          tarball=$(sh scripts/release/fetch-php.sh "$PHP" "$RUNNER_TEMP/php-src")
+          EXTRA_CFLAGS="-fsanitize=address -fno-omit-frame-pointer" EXTRA_CONFIGURE="LDFLAGS=-fsanitize=address" \
+            ASAN_OPTIONS=detect_leaks=0 sh scripts/release/build-php.sh "$tarball" nts "$RUNNER_TEMP/php-asan"
+      - name: phpt under ASan
+        run: PATH="$RUNNER_TEMP/php-asan/bin:$PATH" SRC="$PWD" sh scripts/ci/phpt.sh --asan-native
 
   phpt-valgrind:
     name: phpt 8.4 (valgrind)
@@ -119,7 +148,7 @@ jobs:
   ci-ok:
     name: ci-ok
     if: always()
-    needs: [lint, unit, unit-centos7, phpt, phpt-asan, phpt-valgrind, phpt-arm64]
+    needs: [lint, unit, unit-centos7, phpt, phpt-asan, phpt-asan-php7, phpt-valgrind, phpt-arm64]
     runs-on: ubuntu-24.04
     steps:
       - name: All CI jobs succeeded

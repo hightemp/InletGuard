@@ -5,9 +5,14 @@
 # php:<version>-<cli|zts> image, both in CI and locally:
 #
 #   docker run --rm -v "$PWD:/src:ro" php:8.4-zts sh /src/scripts/ci/phpt.sh
-#   docker run --rm -v "$PWD:/src:ro" php:7.4-cli sh /src/scripts/ci/phpt.sh --asan
+#   docker run --rm -v "$PWD:/src:ro" php:8.4-cli sh /src/scripts/ci/phpt.sh --asan
+#   PATH=/opt/php-asan/bin:$PATH SRC=$PWD sh scripts/ci/phpt.sh --asan-native
 #
-# Modes: (none) | --asan | --valgrind
+# Modes:
+#   (none)         regular build with -Werror
+#   --asan         sanitizers for a stock (non-ASan) PHP: dlopen shim + LD_PRELOAD
+#   --asan-native  sanitizers for a PHP built with -fsanitize=address
+#   --valgrind     run-tests -m
 
 set -eu
 
@@ -28,7 +33,7 @@ php -r 'echo "PHP ", PHP_VERSION, (PHP_ZTS ? " ZTS" : " NTS"), PHP_EOL;'
 CFLAGS="-g -O2"
 LDFLAGS=""
 DEV="--enable-inletguard-dev"
-if [ "$MODE" = "--asan" ]; then
+if [ "$MODE" = "--asan" ] || [ "$MODE" = "--asan-native" ]; then
 	CFLAGS="-g -O1 -fno-omit-frame-pointer -fsanitize=address,undefined -fno-sanitize-recover=undefined"
 	LDFLAGS="-fsanitize=address,undefined"
 	# Some PHP headers redefine __SANITIZE_ADDRESS__ under newer GCC, a warning
@@ -38,7 +43,8 @@ if [ "$MODE" = "--asan" ]; then
 	# configure's test programs fail; leaks are covered by the valgrind job.
 	export ASAN_OPTIONS="detect_leaks=0:abort_on_error=1:verify_asan_link_order=0"
 	export UBSAN_OPTIONS="print_stacktrace=1:halt_on_error=1"
-
+fi
+if [ "$MODE" = "--asan" ]; then
 	# Stock PHP loads extensions with RTLD_DEEPBIND, which the sanitizer
 	# runtime rejects. Strip the flag with a tiny dlopen() interposer instead
 	# of rebuilding PHP itself with ASan.
@@ -58,6 +64,12 @@ SHIM
 fi
 
 phpize >/dev/null
+if [ "$MODE" = "--asan" ] || [ "$MODE" = "--asan-native" ]; then
+	# run-tests.php of PHP 7.0-7.3 forces USE_ZEND_ALLOC=1 for test processes
+	# unless -m is given; with the Zend allocator ASan cannot see overflows
+	# inside its chunks. Keep the system allocator.
+	sed -i "s/\$env\['USE_ZEND_ALLOC'\] = '1';/\$env['USE_ZEND_ALLOC'] = '0';/" run-tests.php
+fi
 ./configure --enable-inletguard $DEV CFLAGS="$CFLAGS" LDFLAGS="$LDFLAGS" >/dev/null
 make -j"$(nproc)" >/dev/null
 
@@ -71,6 +83,12 @@ case "$MODE" in
 	# preloaded; the Zend allocator is disabled so ASan sees every allocation.
 	export USE_ZEND_ALLOC=0
 	LD_PRELOAD="/tmp/nodeepbind.so $(gcc -print-file-name=libasan.so)" make test TESTS="$TESTS"
+	;;
+--asan-native)
+	# The ASan runtime is already linked into PHP, which then loads
+	# extensions without RTLD_DEEPBIND.
+	export USE_ZEND_ALLOC=0
+	make test TESTS="$TESTS"
 	;;
 --valgrind)
 	make test TESTS="-m $TESTS"

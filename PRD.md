@@ -407,3 +407,9 @@ optional Redis/Memcached.
 - `packaging/20-inletguard.ini` is a one-liner for now (full version in 2.22). 7.x ASan follows in a separate PR using the same `build-php.sh` with `-fsanitize=address`.
 - Tests first: `tests/scripts/test-release-scripts.sh` checks `version.sh`, the versions file (exactly branches 7.0–8.4, matching versions, 64-char SHA256) and `package.sh` (archive name and exact file set on a dummy `.so`). The full PHP build is verified locally in a manylinux container (7.0 and 8.4, NTS and ZTS) and then by the workflow.
 
+### ASan for PHP 7.x (follow-up of 0.5 / 0.5d)
+- Verified: PHP 7.0/7.4 `DL_LOAD` skips `RTLD_DEEPBIND` when `__SANITIZE_ADDRESS__` is defined, so an ASan-built PHP loads extensions without the shim or `LD_PRELOAD`. Both build with the runner toolchain (gcc 13) via `build-php.sh`. UBSan reports UB inside PHP 7.x itself (`zend_alloc.c`, `zend_hash.c`), so PHP gets ASan only.
+- Job `phpt-asan-php7` (7.0, 7.4) on the runner host: cached ASan PHP; the extension is built with `-fsanitize=address,undefined` (UBSan checks only our code). `phpt.sh --asan-native` = sanitizer build without shim/preload, PHP from `PATH`. `ci-ok` needs the new job.
+- Check: phpt green locally; the heap-overflow trap fails the run on 7.0 and 7.4.
+- Outcome: on 7.0 the trap first went **undetected** although a direct `php` run caught it — `run-tests.php` of PHP 7.0–7.3 forces `USE_ZEND_ALLOC=1` for test processes unless `-m` is given, and ASan cannot see overflows inside Zend allocator chunks. In ASan modes `phpt.sh` now patches its copy of `run-tests.php` to keep `USE_ZEND_ALLOC=0`; the trap then fires on 7.0 and 7.4, regular `--asan` on 8.4 stays green. Lesson: verify every sanitizer job with a trap on every version.
+
