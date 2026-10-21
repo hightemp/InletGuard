@@ -443,3 +443,8 @@ optional Redis/Memcached.
 - `THIRD_PARTY_NOTICES` entry. API wrappers are tasks 1.1–1.2.
 - Tests first: a unit test that the library is linked with the expected version (`libinjection_version()`), and `check-vendor.sh` must fail on a tampered copy.
 
+### Smoke tests vs. flaky external repositories (follow-up of 0.5g)
+- On PR #9 `smoke almalinux 9 + remi` failed on EPEL mirrors ("All mirrors were tried"), earlier Launchpad returned 503s — infrastructure, not product failures.
+- `scripts/release/retry.sh <attempts> <delay> <cmd...>` retries a command and keeps the last exit code. All network steps of `smoke-remi.sh` and `smoke-debian-sury.sh` go through `retry.sh 5 30`; dnf also gets `retries=10`, `timeout=60`. The extension load checks themselves are never retried.
+- Tests first: `tests/scripts/test-retry.sh` (fails twice then succeeds with 3 attempts → success; always failing → failure after exactly N attempts; last exit code preserved).
+
