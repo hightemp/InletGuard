@@ -127,6 +127,27 @@ jobs:
       - name: phpt under ASan
         run: PATH="$RUNNER_TEMP/php-asan/bin:$PATH" SRC="$PWD" sh scripts/ci/phpt.sh --asan-native
 
+  phpt-minimal-modules:
+    # A build with a reduced module set (FR-10.2) and the configure option tests.
+    name: phpt ${{ matrix.php }} (modules=sqli)
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        php: ['7.0', '8.4']
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: configure option tests
+        run: docker run --rm -v "$PWD:/src:ro" "php:${PHP}-cli" sh /src/tests/scripts/test-configure-modules.sh
+        env:
+          PHP: ${{ matrix.php }}
+      - name: phpt with only the sqli module
+        run: >-
+          docker run --rm -v "$PWD:/src:ro" -e INLETGUARD_CONFIGURE=--with-inletguard-modules=sqli
+          -e IG_EXPECT_MODULES=sqli "php:${PHP}-cli" sh /src/scripts/ci/phpt.sh
+        env:
+          PHP: ${{ matrix.php }}
+
   phpt-valgrind:
     name: phpt 8.4 (valgrind)
     runs-on: ubuntu-24.04
@@ -155,7 +176,7 @@ jobs:
   ci-ok:
     name: ci-ok
     if: always()
-    needs: [lint, unit, unit-centos7, phpt, phpt-asan, phpt-asan-php7, phpt-valgrind, phpt-arm64]
+    needs: [lint, unit, unit-centos7, phpt, phpt-asan, phpt-asan-php7, phpt-minimal-modules, phpt-valgrind, phpt-arm64]
     runs-on: ubuntu-24.04
     steps:
       - name: All CI jobs succeeded

@@ -45,7 +45,7 @@
 - [x] **0.11 [INFRA]** `README.md`, `CONTRIBUTING.md`.
 - [x] **0.12 [INFRA]** Licensing: MIT `LICENSE`, `THIRD_PARTY_NOTICES`, SPDX headers, CI check.
 - [x] **0.13 [SPIKE]** Pool/vhost configuration → ADR-009: pool values only in workers, vhost values per request; 7.0–7.1 `php_value` hole closed by an `OnUpdate` stage guard; startup directives from the global ini only.
-- [ ] **0.14 [INFRA]** Build flags for modules (`--with-inletguard-modules`, `--disable-inletguard-<m>`).
+- [x] **0.14 [INFRA]** Build flags for modules: `--with-inletguard-modules=all|none|list|all,-m` (same syntax as `inletguard.modules`; no separate `--disable-inletguard-<m>`), configure fails on unknown modules, `phpinfo()` row, CI job `phpt-minimal-modules`.
 
 ## Phase 1. Detection core (pure C, no Zend)
 

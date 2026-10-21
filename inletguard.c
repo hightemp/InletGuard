@@ -57,6 +57,7 @@ static PHP_MINFO_FUNCTION(inletguard)
 	php_info_print_table_start();
 	php_info_print_table_row(2, "InletGuard support", "enabled");
 	php_info_print_table_row(2, "Version", PHP_INLETGUARD_VERSION);
+	php_info_print_table_row(2, "Compiled-in modules", IG_COMPILED_MODULES);
 	php_info_print_table_end();
 }
 
