@@ -677,3 +677,34 @@ SEVERITY    = "info" | "low" | "medium" | "high" | "critical" ;
 6. ~~PHP 5.6 / 7.0.~~ Решено: вся ветка 7.x (с 7.0) поддерживается, 5.x — нет.
 7. ~~Формат правил virtual patching: совместимый с Snuffleupagus/ModSecurity или свой?~~ Решено: свой формат IGR (раздел 11), импорт из Snuffleupagus/ModSecurity — офлайн-конвертером в бэклоге.
 8. ~~Хранение счётчиков Behavior-уровня.~~ Решено: `shm` по умолчанию (v2.2), Redis/Memcached — опционально через `counters.backend` (v2.3, FR-12).
+
+## 13. Заметки по реализации
+
+> Правило проекта (`AGENTS.md`): взял задачу → сначала обдумать решение и записать заметку сюда → потом реализация. Заметка фиксирует решение, альтернативы и план тестов (TDD). Номера — по `TASKS.md`.
+
+### 0.1 Каркас расширения *(заметка записана задним числом — правило из AGENTS.md замечено после реализации)*
+- Классическая раскладка PECL: `config.m4`, `php_inletguard.h`, `inletguard.c` в корне (так ожидают `phpize`, PECL и PIE); код ядра — `src/core/` (чистый C99, без Zend), интеграция — `src/zend/`.
+- `--enable-inletguard-dev` включает `-Wall -Wextra -Werror` (без `unused-parameter` и `missing-field-initializers` — их генерируют макросы Zend). `-Werror` не включается по умолчанию, чтобы сборка у пользователей на новых компиляторах не ломалась из-за новых предупреждений.
+- `-std=gnu99`, а не `c99`: заголовки PHP 7.x используют GNU-расширения; ядро в `src/core/` при этом проверяется строгим `-std=c99 -pedantic` в unit-сборке.
+- ZTS: стандартная схема `ZEND_TSRMLS_CACHE_DEFINE/UPDATE` при `COMPILE_DL_INLETGUARD`.
+
+### 0.3 Unit-раннер на C *(задним числом)*
+- Свой минимальный раннер вместо cmocka/Unity: ноль зависимостей (NFR-9, старые тулчейны хостингов), ~100 строк.
+- Тесты саморегистрируются через `__attribute__((constructor))` (GCC/Clang, есть в GCC 4.8) — новый тест-файл достаточно положить как `tests/unit/test_*.c`.
+- Отдельный `tests/unit/Makefile` (собирается без PHP — быстрый TDD-цикл), из основного Makefile доступен как `make unit` / `make unit-asan` через `Makefile.frag`. Строгие флаги `-std=c99 -pedantic -Werror` гарантируют, что ядро остаётся чистым C99.
+- Фильтр по имени теста: `make -C tests/unit FILTER=version`.
+
+### 0.2 `InletGuard\version()` — первый TDD-цикл
+**Решение:**
+- Единственный источник версии — `src/core/ig_version.h` (`IG_VERSION_MAJOR/MINOR/PATCH/SUFFIX` → строка `IG_VERSION`); `php_inletguard.h` берёт `PHP_INLETGUARD_VERSION` оттуда. Скрипт согласованности версий (0.5f) читает этот же файл.
+- `ig_version()` в ядре — для unit-теста и будущих потребителей `libigcore`.
+- Функция в пространстве имён через `ZEND_NS_NAMED_FE("InletGuard", version, zif_inletguard_version, …)` — макрос есть во всех версиях 7.0–8.4; C-имя `zif_inletguard_version`, чтобы не конфликтовать с другими `version`.
+- arginfo с типом возврата `string`: сигнатура `ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX` различается — в 7.0–7.1 `(name, ref, req, type, class_name, allow_null)`, с 7.2 `(name, ref, req, type, allow_null)`. Это первая обёртка слоя совместимости (0.5a): `IG_BEGIN_ARG_WITH_RETURN_TYPE_INFO(name, req, type, allow_null)` в `src/zend/php_compat.h`.
+- Параметры — `zend_parse_parameters_none()` (есть везде; `ZEND_PARSE_PARAMETERS_NONE` появился позже).
+
+**Тесты (пишутся первыми, red):**
+1. unit `test_version.c`: `ig_version()` равна `IG_VERSION`; строка собрана из MAJOR.MINOR.PATCH[-SUFFIX]. Red — не компилируется (нет `ig_version.h`).
+2. phpt `002-version.phpt`: `InletGuard\version()` возвращает строку = `phpversion('inletguard')`, формат SemVer. Red — `Call to undefined function`.
+3. phpt `003-version-reflection.phpt`: Reflection — функция в пространстве имён `InletGuard`, 0 параметров, тип возврата `string` на всех версиях. Проверяет обёртку arginfo.
+
+**Проверка:** локально PHP 7.2, 7.4, 8.1, 8.4 (phvm) + 7.0 в Docker; полная матрица — после CI (0.5).
