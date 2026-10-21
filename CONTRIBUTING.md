@@ -30,6 +30,9 @@
 - AddressSanitizer/UBSan clean, no compiler warnings with
   `--enable-inletguard-dev` (`-Werror`).
 - New files carry an `SPDX-License-Identifier: MIT` header.
+- User-visible changes are listed under `## [Unreleased]` in `CHANGELOG.md`
+  (Keep a Changelog). A release moves them into `## [X.Y.Z] - YYYY-MM-DD`;
+  the release pipeline refuses tags without that section.
 - Only permissive third-party code (MIT, BSD, Apache-2.0, zlib); no GPL/LGPL.
 
 ## Layout

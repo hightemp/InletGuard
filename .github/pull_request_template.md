@@ -10,3 +10,4 @@
 - [ ] Passes on the full matrix (PHP 7.0–8.4 × NTS/ZTS), ASan clean
 - [ ] Code, comments, messages and docs are in English
 - [ ] New files carry an `SPDX-License-Identifier: MIT` header
+- [ ] User-visible changes added to `CHANGELOG.md` under `[Unreleased]`

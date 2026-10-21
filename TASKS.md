@@ -35,7 +35,7 @@
 - [x] **0.5c [INFRA]** `nightly.yml`: scheduled full CI + auto-discovering fuzz harness (tested with temporary targets); corpora and benchmarks join in 1.8 and 7.3.
 - [x] **0.5d [INFRA]** `release.yml` in dry-run: 40 `.so` builds on glibc 2.17 against verified PHP sources, phpt per build, archives, source tarball, checksums. PECL package → 7.7, attestations → 0.5e, 7.x ASan → follow-up PR.
 - [x] **0.5e [INFRA]** Publishing locks: tested `check-policy.sh`, `policy` job before builds, `publish` job (attestations + draft release) only for an allowed real tag in the `release` environment (owner approval, `v*` tags only); `simulate_ref` instead of a public test tag.
-- [ ] **0.5f [INFRA]** Version consistency check (tag, header, `package.xml`, `CHANGELOG.md`).
+- [x] **0.5f [INFRA]** Version consistency check (tag = `ig_version.h` = `CHANGELOG.md` section, no `-dev`, `package.xml` if present) in the `policy` job; release notes from CHANGELOG; `CHANGELOG.md` added.
 - [ ] **0.5g [INFRA]** Artifact smoke tests on CentOS 7, AlmaLinux 8–9, Debian, Ubuntu.
 - [ ] **0.6 [INFRA]** clang-format, cppcheck, clang-tidy, `-Werror`. *Partially done (clang-tidy pending).*
 - [ ] **0.7 [INFRA]** Vendor libinjection into `third_party/`.
