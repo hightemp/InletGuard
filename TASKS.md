@@ -40,7 +40,7 @@
 - [ ] **0.6 [INFRA]** clang-format, cppcheck, clang-tidy, `-Werror`. *Partially done (clang-tidy pending).*
 - [x] **0.7 [INFRA]** Vendor libinjection into `third_party/`: v4.0.0 (no `abort()` on parser errors), unmodified with SHA256 record, `check-vendor.sh` in CI, lenient flags for vendored code, full license text in `THIRD_PARTY_NOTICES`.
 - [x] **0.8 [SPIKE]** Input interception via `sapi_register_input_filter` chained with ext/filter → ADR-001 (GET/POST/COOKIE via the filter; headers and URI from `$_SERVER` in RINIT; request state reset in `input_filter_init`).
-- [ ] **0.9 [SPIKE]** Blocking mechanism (stop the script after RINIT) across SAPIs → ADR-002.
+- [x] **0.9 [SPIKE]** Blocking mechanism → ADR-002: `zend_compile_file` wrapper installed in the first RINIT (after OPcache) + `zend_bailout()` on the first compile of a blocked request; RINIT variants kill FPM workers, a MINIT hook is bypassed by OPcache.
 - [ ] **0.10 [SPIKE]** Hooking internal functions and methods, Xdebug compatibility → ADR-003.
 - [x] **0.11 [INFRA]** `README.md`, `CONTRIBUTING.md`.
 - [x] **0.12 [INFRA]** Licensing: MIT `LICENSE`, `THIRD_PARTY_NOTICES`, SPDX headers, CI check.
@@ -110,7 +110,7 @@
 - [ ] **4.4 [TDD]** Selected headers (from `$_SERVER` in RINIT, ADR-001).
 - [ ] **4.5 [TDD]** Keys and nested arrays, depth limit.
 - [ ] **4.6 [TDD]** Length/count limits → `limit_exceeded`.
-- [ ] **4.7 [TDD]** `block`: status code, script does not run.
+- [ ] **4.7 [TDD]** `block`: status code, script does not run (ADR-002; tests: FPM + OPcache, worker stays alive per FPM log, Valgrind clean on bailout).
 - [ ] **4.7a [TDD]** Block response body: formats, templates, optional header.
 - [ ] **4.8 [TDD]** `sanitize` strategies for XSS and SQLi.
 - [ ] **4.9 [TDD]** Per-class modes, strictest reaction wins.
