@@ -37,6 +37,7 @@ jobs:
         run: |
           sh tests/scripts/test-check-compat.sh
           sh tests/scripts/test-fuzz-harness.sh
+          sh tests/scripts/test-release-scripts.sh
 
   unit:
     name: unit (${{ matrix.cc }}${{ matrix.sanitize == '1' && ', asan+ubsan' || '' }})

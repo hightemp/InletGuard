@@ -60,7 +60,7 @@ else
 	fail "package.sh output: '$archive', expected '$expected'"
 fi
 base="inletguard-$version-php8.3-zts-aarch64-linux-gnu"
-files=$(tar -tzf "$expected" 2>/dev/null | grep -v '/$' | sort | tr '\n' ' ')
+files=$(tar -tzf "$expected" 2>/dev/null | grep -v '/$' | LC_ALL=C sort | tr '\n' ' ')
 want="$base/20-inletguard.ini $base/LICENSE $base/README.md $base/THIRD_PARTY_NOTICES $base/inletguard.so "
 if [ "$files" = "$want" ]; then
 	pass "archive contains exactly .so, ini, README, LICENSE, THIRD_PARTY_NOTICES"
