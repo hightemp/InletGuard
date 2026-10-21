@@ -28,6 +28,10 @@ jobs:
           cppcheck --std=c99 --enable=warning,portability,performance --error-exitcode=1 --inline-suppr -I src src/core
       - name: license headers
         run: sh scripts/check-license.sh
+      - name: version checks only in php_compat.h
+        run: sh scripts/check-compat.sh
+      - name: tests for CI scripts
+        run: sh tests/scripts/test-check-compat.sh
 
   unit:
     name: unit (${{ matrix.cc }}${{ matrix.sanitize == '1' && ', asan+ubsan' || '' }})

@@ -381,3 +381,10 @@ optional Redis/Memcached.
 - Admins are also subject to the rules (`enforce_admins`), so the process is the same for everyone; force pushes and branch deletion are blocked.
 
 **Rollout:** add `ci-ok` on a branch → open a PR → after `ci-ok` reports green, enable protection via the GitHub API → merge the PR with `gh pr merge` (validates the new flow end to end).
+
+### 0.5a Compatibility layer `php_compat.h`
+- The layer is living: wrappers are added by the task that needs them (YAGNI; e.g. the nullable return type wrapper arrives with 5.1 `check_sqli(): ?string`).
+- 0.5a delivers the foundation: `scripts/check-compat.sh` fails if `PHP_VERSION_ID`, `PHP_MAJOR/MINOR/RELEASE_VERSION`, `ZEND_MODULE_API_NO` or `ZEND_EXTENSION_API_NO` appear in any `*.c`/`*.h` outside `src/zend/php_compat.h` (excluding `third_party/`); runs in the `lint` job. Wrapper conventions documented in the header: `IG_` prefix, a comment saying what differs since which version, a phpt for each wrapper.
+- A grep script rather than a clang-tidy/cppcheck rule: the check is by macro name and file path, needs no PHP headers.
+- Tests first: `tests/scripts/test-check-compat.sh` builds temporary trees (clean tree passes; a version check in another file fails and names it; mentions in comments count too; `third_party/` is ignored).
+- Outcome: the first CI run failed because the test script was never committed — the `.gitignore` rule `/tests/**/*.sh` (run-tests.php output) silently hid `tests/scripts/*.sh`. Fixed with `!/tests/scripts/`; the branch was rebuilt so the red commit really contains the test. Process lesson: check `git status --ignored` for new files before pushing. `ci-ok` correctly failed after `lint`.

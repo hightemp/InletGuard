@@ -2,8 +2,12 @@
 /*
  * Compatibility layer for PHP 7.0 - 8.4.
  *
- * This is the only place where PHP_VERSION_ID checks are allowed. Every
- * wrapper here must be covered by a phpt that runs on all supported versions.
+ * Rules (enforced by scripts/check-compat.sh in CI):
+ *  - this is the only file allowed to check PHP/Zend version macros;
+ *  - wrappers are added by the task that needs them, not in advance;
+ *  - every wrapper uses the IG_ prefix, has a comment saying what differs
+ *    and since which version, and is covered by a phpt that runs on the
+ *    whole matrix.
  */
 
 #ifndef IG_PHP_COMPAT_H
