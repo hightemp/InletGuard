@@ -969,3 +969,15 @@ SEVERITY    = "info" | "low" | "medium" | "high" | "critical" ;
 - **Решение:** все директивы `PHP_INI_SYSTEM` + guard стадий; два вида директив — **загрузочные** (только глобальный `php.ini`; значение из MINIT запоминается, переопределение в пуле/хосте → один `config_warning` на процесс и игнорирование; хуки первого RINIT используют запомненное) и **выполнения** (читаются в C на запрос, можно задавать per-pool/per-vhost).
 
 **Метод:** прототип-расширение с `PHP_INI_SYSTEM`-директивой `igcfg.mode` и `OnUpdate`, логирующим стадию; лог значения в MINIT и RINIT (текущее и `orig_value`); скрипт печатает `ini_get()` и результат `ini_set()`. FPM — два пула (`php_admin_value` и `php_value`) и `.user.ini`; Apache — два виртуальных хоста (`php_admin_value` в одном) и `.htaccess`, запросы к ним по очереди в один процесс (`MaxRequestWorkers 1`).
+
+### 0.14 Флаги сборки модулей
+**Решение:**
+- Одна опция `./configure --with-inletguard-modules=LIST` с тем же синтаксисом, что у директивы `inletguard.modules` (FR-10.2): `all` (по умолчанию), список `sqli,xss`, исключения `all,-xss`, `none` (только PHP API). **Отклонение от плана:** отдельные флаги `--disable-inletguard-<m>` не делаем — один синтаксис для сборки и для ini проще запомнить и проверить, а `all,-m` даёт то же самое.
+- Неизвестное имя модуля, пустой список, исключение неизвестного модуля → `configure` завершается с ошибкой и списком известных модулей (опечатка не должна молча собрать расширение без защиты).
+- Результат: `IG_MODULE_<M>` = 1/0 для каждого известного модуля и строка `IG_COMPILED_MODULES` в `config.h`; исходники модуля попадают в сборку только при `IG_MODULE_<M>=1` (сейчас исходников модулей нет — механизм готовится заранее). Список известных модулей пока живёт в `config.m4`; в 2.8 станет частью реестра модулей.
+- `phpinfo()` / `php --ri inletguard` показывает строку «Compiled-in modules».
+
+**Тесты (red первыми):**
+- phpt `004-compiled-modules.phpt`: строка «Compiled-in modules» в `phpinfo(INFO_MODULES)` равна ожидаемой (`IG_EXPECT_MODULES`, по умолчанию `sqli, xss`).
+- `tests/scripts/test-configure-modules.sh` (в контейнере с PHP): `all` → `sqli, xss`; `sqli` → `sqli`; `all,-xss` → `sqli`; `none` → `none`; `bogus`, `sqli,bogus`, `all,-bogus`, пустое значение → `configure` падает с понятной ошибкой.
+- CI-job `phpt-minimal-modules`: сборка с `--with-inletguard-modules=sqli`, весь phpt с `IG_EXPECT_MODULES=sqli`, плюс тест configure.
