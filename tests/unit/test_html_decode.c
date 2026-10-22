@@ -98,8 +98,7 @@ IG_TEST(html_decode_legacy_names_with_and_without_semicolon)
 	if (!html("&LT;&GT&QUOT;&AMP", "<>\"&")) {
 		return;
 	}
-	html("a&nbsp;b", "a\xc2\xa0"
-			 "b");
+	html("&nbsp;&nbsp", "\xc2\xa0\xc2\xa0");
 }
 
 IG_TEST(html_decode_names_that_need_a_semicolon)
