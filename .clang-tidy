@@ -1,0 +1,19 @@
+# SPDX-License-Identifier: MIT
+# clang-tidy for src/core (scripts/check-tidy.sh). Reasons for every disabled
+# check: PRD, note 0.6 (continued).
+Checks: >-
+  -*,
+  bugprone-*,
+  cert-*,
+  clang-analyzer-*,
+  misc-*,
+  performance-*,
+  portability-*,
+  readability-*,
+  -misc-include-cleaner,
+  -readability-identifier-length,
+  -bugprone-easily-swappable-parameters,
+  -clang-analyzer-security.insecureAPI.DeprecatedOrUnsafeBufferHandling,
+  -readability-magic-numbers
+WarningsAsErrors: '*'
+HeaderFilterRegex: '(^|.*/)src/core/.*'

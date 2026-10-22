@@ -1050,3 +1050,28 @@ SEVERITY    = "info" | "low" | "medium" | "high" | "critical" ;
 - NUL внутри значения; NULL-аргументы; очистка fingerprint при повторном использовании `res`.
 - Адаптер: `FALSE` / `TRUE` / `ERROR` / неизвестное значение.
 
+
+### 0.6 (продолжение) `clang-tidy`
+**Факты (проверено):**
+- `clang-tidy` 18.1.8 ставится из PyPI так же, как закреплённый `clang-format` (`pipx`/`uvx`).
+- На текущем `src/core` широкий набор (`bugprone`, `cert`, `clang-analyzer`, `misc`, `performance`, `portability`, `readability`) даёт только `misc-include-cleaner` и `readability-identifier-length`.
+- На файле с заложенными ошибками набор ловит неинициализированное значение (`clang-analyzer-core.uninitialized`), двойной `free` (`clang-analyzer-unix.Malloc`) и `signed char` → `int` (`bugprone-signed-char-misuse`).
+- Не ловит `sizeof` указателя в `memcpy` и разыменование результата `malloc` без проверки. Это остаётся за ASan, fuzzing и ревью.
+
+**Решение:**
+- **`.clang-tidy` в корне:** перечисленные группы включены, `WarningsAsErrors: '*'`, `HeaderFilterRegex` охватывает только `src/core/`, вендоренный код не проверяется.
+- **Отключены с обоснованием:**
+  - `misc-include-cleaner` — IWYU-маппинги не настроены, на libinjection и libc сплошь ложные срабатывания;
+  - `readability-identifier-length` — короткие имена `s`, `i`, `fp` идиоматичны для C;
+  - `bugprone-easily-swappable-parameters` — C-API вида `(const char *, size_t, …)` неизбежен;
+  - `clang-analyzer-security.insecureAPI.DeprecatedOrUnsafeBufferHandling` — требует Annex K (`memcpy_s`), которого нет в glibc;
+  - `readability-magic-numbers` — таблицы декодеров в 1.4/1.5.
+- **Скрипт `scripts/check-tidy.sh [root]`** прогоняет `clang-tidy` (`$CLANG_TIDY`, по умолчанию `clang-tidy`) по `src/core/*.c` с флагами сборки ядра (`-std=c99 -D_POSIX_C_SOURCE=200809L -Isrc -Ithird_party/libinjection`). Если инструмент не найден, это ошибка: проверка не должна молча проходить.
+- **CI, job `lint`:** `pipx install clang-tidy==18.1.8`, затем скрипт и его тест.
+- **`src/zend` и `inletguard.c`** требуют заголовков PHP. Их проверку можно добавить позже, в контейнере с `php-config --includes`, когда там появится логика (фаза 2+).
+
+**Тесты (red первыми), `tests/scripts/test-check-tidy.sh`:** временные деревья с настоящим `.clang-tidy`.
+- Текущий `src/core` проходит.
+- Заложенные ошибки обнаруживаются, вывод называет файл: неинициализированное значение, двойной `free`, `signed char`, ошибка в заголовке `src/core/*.h` (через `HeaderFilterRegex`).
+- Код в `third_party/` не проверяется.
+- Отсутствующий `clang-tidy` → ошибка.

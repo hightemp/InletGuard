@@ -29,6 +29,10 @@ jobs:
           sudo apt-get update -qq
           sudo apt-get install -y -qq cppcheck
           cppcheck --std=c99 --enable=warning,portability,performance --error-exitcode=1 --inline-suppr -I src src/core
+      - name: clang-tidy (core)
+        run: |
+          pipx install clang-tidy==18.1.8
+          sh scripts/check-tidy.sh
       - name: license headers
         run: sh scripts/check-license.sh
       - name: version checks only in php_compat.h
@@ -48,6 +52,7 @@ jobs:
           sh tests/scripts/test-check-vendor.sh
           sh tests/scripts/test-retry.sh
           sh tests/scripts/test-check-php-matrix.sh
+          sh tests/scripts/test-check-tidy.sh
 
   unit:
     name: unit (${{ matrix.cc }}${{ matrix.sanitize == '1' && ', asan+ubsan' || '' }})

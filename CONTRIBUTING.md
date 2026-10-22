@@ -53,3 +53,10 @@ Formatting is enforced with `clang-format` 18.1.8 (`.clang-format`):
 ```sh
 pipx run clang-format==18.1.8 -i $(git ls-files '*.c' '*.h')
 ```
+
+The core (`src/core`) is also checked with `clang-tidy` 18.1.8 (`.clang-tidy`);
+every warning is an error:
+
+```sh
+CLANG_TIDY="pipx run clang-tidy==18.1.8" sh scripts/check-tidy.sh
+```

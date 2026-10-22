@@ -538,3 +538,25 @@ optional Redis/Memcached.
   - an embedded NUL, NULL arguments, fingerprint reset on reuse;
   - the adapter: FALSE / TRUE / ERROR / unknown value.
 
+
+### 0.6 (continued) `clang-tidy`
+- **Facts:**
+  - `clang-tidy` 18.1.8 comes from PyPI, like the pinned `clang-format`.
+  - On the current `src/core`, the broad set (`bugprone`, `cert`, `clang-analyzer`, `misc`, `performance`, `portability`, `readability`) reports only `misc-include-cleaner` and `readability-identifier-length`.
+  - On planted bugs it catches an uninitialized value, a double `free` and `signed char` misuse. It misses `sizeof` of a pointer in `memcpy` and dereferencing an unchecked `malloc`; those are left to ASan, fuzzing and review.
+- **Decision:**
+  - **`.clang-tidy`** with those groups, `WarningsAsErrors: '*'`, and `HeaderFilterRegex` limited to `src/core/`.
+  - **Disabled, with reasons:**
+    - `misc-include-cleaner` (no IWYU mappings);
+    - `readability-identifier-length` (idiomatic short C names);
+    - `bugprone-easily-swappable-parameters` (`(const char *, size_t)` APIs);
+    - `…insecureAPI.DeprecatedOrUnsafeBufferHandling` (Annex K, absent in glibc);
+    - `readability-magic-numbers` (decoder tables in 1.4/1.5).
+  - **`scripts/check-tidy.sh [root]`** runs `$CLANG_TIDY` (default `clang-tidy`) over `src/core/*.c` with the core build flags. A missing tool is an error.
+  - **CI, `lint`:** `pipx install clang-tidy==18.1.8`, the script and its test.
+  - **`src/zend`/`inletguard.c`** need PHP headers and will be added later in a PHP container.
+- **Tests first** (`tests/scripts/test-check-tidy.sh`, temporary trees with the real `.clang-tidy`):
+  - the current `src/core` passes;
+  - planted bugs fail and name the file: uninitialized value, double free, `signed char`, a bug in a `src/core` header;
+  - `third_party/` is ignored;
+  - a missing `clang-tidy` fails.
