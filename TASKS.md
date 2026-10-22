@@ -37,7 +37,7 @@
 - [x] **0.5e [INFRA]** Publishing locks: tested `check-policy.sh`, `policy` job before builds, `publish` job (attestations + draft release) only for an allowed real tag in the `release` environment (owner approval, `v*` tags only); `simulate_ref` instead of a public test tag.
 - [x] **0.5f [INFRA]** Version consistency check (tag = `ig_version.h` = `CHANGELOG.md` section, no `-dev`, `package.xml` if present) in the `policy` job; release notes from CHANGELOG; `CHANGELOG.md` added.
 - [x] **0.5g [INFRA]** Artifact smoke tests: official images (both arches, NTS/ZTS), Debian 12 + packages.sury.org, AlmaLinux 8/9 + Remi; CentOS 7 via phpt in manylinux2014. FR-13.7 scenario in 7.5a.
-- [ ] **0.6 [INFRA]** clang-format, cppcheck, clang-tidy, `-Werror`. *Partially done (clang-tidy pending).*
+- [x] **0.6 [INFRA]** clang-format, cppcheck, clang-tidy, `-Werror`. *Done: clang-tidy 18.1.8 over `src/core` (`.clang-tidy`, tested `scripts/check-tidy.sh`); `src/zend` later, in a PHP container.*
 - [x] **0.7 [INFRA]** Vendor libinjection into `third_party/`: v4.0.0 (no `abort()` on parser errors), unmodified with SHA256 record, `check-vendor.sh` in CI, lenient flags for vendored code, full license text in `THIRD_PARTY_NOTICES`.
 - [x] **0.8 [SPIKE]** Input interception via `sapi_register_input_filter` chained with ext/filter → ADR-001 (GET/POST/COOKIE via the filter; headers and URI from `$_SERVER` in RINIT; request state reset in `input_filter_init`).
 - [x] **0.9 [SPIKE]** Blocking mechanism → ADR-002: `zend_compile_file` wrapper installed in the first RINIT (after OPcache) + `zend_bailout()` on the first compile of a blocked request; RINIT variants kill FPM workers, a MINIT hook is bypassed by OPcache.

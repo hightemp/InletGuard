@@ -73,8 +73,10 @@ expect "third_party headers are not checked" 0 "$t"
 
 t=$(make_tree missing)
 printf 'int ok;\n' >"$t/src/core/ok.c"
-out=$(CLANG_TIDY=/nonexistent/clang-tidy sh "$CHECK" "$t" 2>&1)
-if [ $? -ne 0 ] && printf '%s' "$out" | grep -q 'clang-tidy'; then
+if out=$(CLANG_TIDY=/nonexistent/clang-tidy sh "$CHECK" "$t" 2>&1); then
+	echo "FAIL a missing clang-tidy must fail: $out"
+	failures=$((failures + 1))
+elif printf '%s' "$out" | grep -q 'clang-tidy'; then
 	echo "PASS a missing clang-tidy fails"
 else
 	echo "FAIL a missing clang-tidy must fail: $out"
