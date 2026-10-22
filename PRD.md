@@ -609,3 +609,33 @@ optional Redis/Memcached.
   - lookup by bit: found, 0, several bits, unknown bit;
   - `ig_detector_at` out of range;
   - registry `detect` gives the same verdicts as the direct functions.
+
+### 1.4 Normalizer: URL decoding, `%u`, NUL
+- **Context:**
+  - PHP has already URL-decoded GET/POST/COOKIE once before the input filter, so `decode_rounds` (default 2) are **extra** rounds that catch double and triple encoding.
+  - `REQUEST_URI` is raw, so the same rounds give it its first decode.
+  - A copy is normalized; the original value is not touched.
+- **Decision** (`src/core/ig_normalize.{h,c}`):
+  - **One round:** `ig_url_decode(in, len, out, flags)`.
+    - `%XX` → byte.
+    - `%uXXXX` (IIS, a common WAF bypass) → UTF-8, 1–3 bytes; surrogates are not decoded.
+    - `+` → space only with `IG_DECODE_PLUS` (query/body; it is literal in a URI path).
+    - Invalid or truncated sequences are copied as is, like PHP does.
+    - The output is never longer than the input, so an `out` of `len` bytes is enough and in-place decoding is allowed.
+  - **Normalization:** `ig_normalize(in, len, rounds, flags, out, &stats)`.
+    - Each round decodes, then removes NUL bytes. NUL is removed in every round because `%%0041` becomes `%41` only after the NUL goes.
+    - It stops when a round changes nothing or the rounds run out.
+    - NUL removal also happens with `rounds = 0`.
+  - **Stats:** `rounds` (rounds that changed the value), `nul_removed`, and `limit_hit` (the value would still decode). The anomaly event for `limit_hit` comes with class 3 (v1.1).
+  - **No allocation** in the core: the caller provides the buffer (`emalloc` in the Zend layer, phase 4). Stateless and ZTS-safe.
+  - **Out of scope:** overlong UTF-8 and invalid encodings (class 3), HTML entities (1.5), length limits (1.6).
+- **Tests first** (`tests/unit/test_normalize.c`):
+  - one round:
+    - hex in both cases; invalid and truncated sequences kept;
+    - `%u0041`, `%u0410`, `%u20AC`; a surrogate and an invalid `%u` kept;
+    - `+` with and without the flag; in-place decoding; empty input.
+  - normalization:
+    - double encoding; triple encoding with 2 rounds (→ `limit_hit`); early stop;
+    - NUL raw and `%00`; `%%0041`;
+    - `rounds = 0`; the output is never longer; NULL arguments.
+  - Fuzz target `fuzz_normalize`: output ≤ input and NUL-free, in-place = separate buffer, a round never grows the value.
