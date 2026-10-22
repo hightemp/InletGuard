@@ -12,7 +12,7 @@
 > log and error messages, tests, commits, `README.md`, `docs/`, ADRs. Only
 > `PRD.ru.md` and `TASKS.ru.md` are in Russian.
 
-> **Supported PHP: 7.0 – 8.4**, NTS and ZTS, Linux. The whole 7.x branch is
+> **Supported PHP: 7.0 – 8.5**, NTS and ZTS, Linux. The whole 7.x branch is
 > covered because shared hosting still runs it widely (cPanel / CloudLinux
 > alt-php, ISPmanager). PHP 5.x is not supported (different Zend API).
 
@@ -170,7 +170,7 @@ behavior modules off. Events go to `error_log`; rules directory
 | NFR-1 Performance | < 50 µs per typical request (20 params); < 10 µs per DB query without matches |
 | NFR-2 Reliability | No crashes or leaks: ASan/UBSan, Valgrind, ≥ 1 h fuzzing before release |
 | NFR-3 Fail-open | Internal error → `internal_error` event, request continues (`fail_mode`) |
-| NFR-4 Compatibility | PHP 7.0–8.4 × NTS/ZTS; FPM, CGI, mod_php, CLI, LSAPI; ext/filter; x86_64, aarch64; version checks only in `php_compat.h` |
+| NFR-4 Compatibility | PHP 7.0–8.5 × NTS/ZTS; FPM, CGI, mod_php, CLI, LSAPI; ext/filter; x86_64, aarch64; version checks only in `php_compat.h` |
 | NFR-5 Accuracy | SQLi detection ≥ 95 %, XSS ≥ 90 %, false positives < 0.5 % on corpora |
 | NFR-6 Code safety | `-Wall -Wextra -Werror`, static analysis, no unbounded string functions |
 | NFR-7 Build | `phpize && ./configure --enable-inletguard && make && make test`; C99, GCC ≥ 4.8; PECL and PIE |
@@ -209,7 +209,7 @@ stand (WordPress + legacy app) without false blocks after tuning.
 ## 8. Risks (summary)
 False positives on rich HTML; encoding bypasses; conflicts with other
 extensions hooking the same functions (Xdebug, APM); Zend API differences
-across 7.0–8.4; C bugs crashing sites; aging images for EOL PHP versions;
+across 7.0–8.5; C bugs crashing sites; aging images for EOL PHP versions;
 overhead of many hooks; SSRF bypasses (DNS rebinding, URL parser
 differentials). Mitigations: monitor/learn, corpora, fuzzing, sanitizers,
 `php_compat.h`, CI matrix, performance budgets — see `PRD.ru.md` section 8.
@@ -220,7 +220,7 @@ Red → green → refactor for every task. Levels: C unit tests (core), `.phpt`
 integration tests (same tests for all PHP versions), corpora (accuracy),
 ASan/UBSan and Valgrind, libFuzzer, performance budgets.
 
-**Definition of done:** tests written before code, green on PHP 7.0–8.4 ×
+**Definition of done:** tests written before code, green on PHP 7.0–8.5 ×
 NTS/ZTS, ASan clean, no compiler warnings.
 
 ### 9.1 CI (GitHub Actions)
@@ -228,7 +228,7 @@ Built in phase 0, before any production code.
 
 | Workflow | Trigger | Content |
 |---|---|---|
-| `ci.yml` | push, PR | lint, license/SPDX, unit tests, phpt matrix 7.0–8.4 × NTS/ZTS, ASan, Valgrind, old toolchain, aarch64 |
+| `ci.yml` | push, PR | lint, license/SPDX, unit tests, phpt matrix 7.0–8.5 × NTS/ZTS, ASan, Valgrind, old toolchain, aarch64 |
 | `nightly.yml` | cron | fuzzing, corpus metrics, benchmarks |
 | `release.yml` | tag, manual, push to `main` (dry-run) | build, package, smoke-test, publish per 9.2 |
 
@@ -479,3 +479,31 @@ optional Redis/Memcached.
 - Output: `IG_MODULE_<M>` 1/0 per known module and `IG_COMPILED_MODULES` in `config.h`; module sources are built only when enabled (none exist yet). The list of known modules lives in `config.m4` for now and moves into the module registry in 2.8. `phpinfo()` shows "Compiled-in modules".
 - Tests first: phpt `004-compiled-modules.phpt` (expected list from `IG_EXPECT_MODULES`, default `sqli, xss`); `tests/scripts/test-configure-modules.sh` (all/list/exclusion/none accepted; unknown names, empty value, excluding unknown → configure fails); CI job `phpt-minimal-modules` building with `sqli` only.
 
+
+### 0.15 PHP 8.5 support
+- **Facts (verified 2026-10-22):**
+  - PHP 8.5.12 (21 Oct 2026); php.net publishes the `.tar.xz` SHA256.
+  - Official `php:8.5-cli|zts` images exist for amd64 and arm64.
+  - Packages: `packages.sury.org` for Debian 12 (`php8.5-cli/cgi/dev`) and Remi for EL8 and EL9 (`php85`).
+  - Without code changes:
+    - phpt NTS/ZTS pass with `-Werror`;
+    - ASan with the dlopen shim catches a planted overflow, as on 8.4;
+    - Valgrind is clean and `test-configure-modules.sh` passes;
+    - PHP 8.5 builds from source in manylinux2014 x86_64, and the extension builds, passes phpt and is packaged.
+- **Decision:**
+  - **Matrices.** 8.5 is added to every matrix: phpt (11 branches × NTS/ZTS), release builds (44, `bundle` checks 44) and smoke (official x86_64/aarch64, Debian 12 + sury, AlmaLinux 8/9 + Remi).
+  - **Newest-version jobs.** ASan with the shim, Valgrind, aarch64 and minimal modules move from 8.4 to 8.5. ASan keeps 8.1, the oldest version where the shim works, and 8.4 stays covered by the main matrix.
+  - **Single source for the branch list:** `scripts/release/php-versions.txt`. The new `scripts/check-php-matrix.sh` (job `lint`) checks it against:
+    - the `phpt` matrix in `ci.yml` and the `build` matrix in `release.yml`;
+    - the archive count in `bundle` (branches × 4);
+    - the smoke branch lists: all branches for official images and sury; for Remi, a contiguous tail of the list ending at the newest branch;
+    - the newest-version jobs in `ci.yml`;
+    - the version line in `README.md` and the "7.0–X" ranges in README, CONTRIBUTING, the PR template and `php_compat.h`.
+
+    Adding 8.6 means one line in the versions file plus whatever the check points out.
+  - **Frameless functions.** The list may have changed in 8.5, but ADR-003 point 3 does not depend on it (`frameless_function_infos` is cleared for every hooked function that has them). This is checked when sinks are implemented (8.3, 12.5).
+  - **8.4 in the versions file** is not bumped: a patch release keeps the ABI.
+  - PRD and TASKS statements about the supported range are updated to 7.0–8.5. Historical notes of finished tasks are left unchanged.
+- **Tests first:**
+  - `test-release-scripts.sh` expects branches 7.0–8.5.
+  - `tests/scripts/test-check-php-matrix.sh` uses temporary trees: a consistent tree passes, and each drift is reported with a clear message — a branch missing from the phpt or build matrix, a wrong archive count, a smoke list without a branch, Remi without the newest branch, README without a branch, a stale "7.0–8.4" range in README, a newest-version job on an old branch.
