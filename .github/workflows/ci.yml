@@ -45,6 +45,7 @@ jobs:
           sh tests/scripts/test-smoke.sh
           sh tests/scripts/test-check-vendor.sh
           sh tests/scripts/test-retry.sh
+          sh tests/scripts/test-check-php-matrix.sh
 
   unit:
     name: unit (${{ matrix.cc }}${{ matrix.sanitize == '1' && ', asan+ubsan' || '' }})
