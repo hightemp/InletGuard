@@ -38,7 +38,7 @@ static const char *const url_attacks[] = {
 	"data:text/html,<p>x</p>",
 	"data:text/html;base64,PHNjcmlwdD5hbGVydCgxKTwvc2NyaXB0Pg==",
 	"DATA:Text/HTML,x",
-	"data:image/svg+xml,<svg/>",
+	"data:image/svg+xml;base64,PHN2Zz4=",
 	"data:application/xhtml+xml,x",
 	"d\tata:text/html,x",
 };
@@ -74,8 +74,8 @@ static int check(const char *s, size_t len, ig_verdict_t want, const char *fp)
 	v = ig_detect_xss(s, len, &res);
 	if (v != want || res.verdict != want || strcmp(res.fingerprint, fp) != 0) {
 		ig_test_fail(__FILE__, __LINE__,
-			"\"%s\": verdict %d/%d, fingerprint \"%.8s\", expected %d \"%s\"", s, (int)v,
-			(int)res.verdict, res.fingerprint, (int)want, fp);
+			"\"%s\": verdict %d/%d, fingerprint \"%.8s\", expected %d \"%s\"", s ? s : "(null)",
+			(int)v, (int)res.verdict, res.fingerprint, (int)want, fp);
 		return 0;
 	}
 	return 1;
