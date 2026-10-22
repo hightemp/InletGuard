@@ -507,3 +507,34 @@ optional Redis/Memcached.
 - **Tests first:**
   - `test-release-scripts.sh` expects branches 7.0–8.5.
   - `tests/scripts/test-check-php-matrix.sh` uses temporary trees: a consistent tree passes, and each drift is reported with a clear message — a branch missing from the phpt or build matrix, a wrong archive count, a smoke list without a branch, Remi without the newest branch, README without a branch, a stale "7.0–8.4" range in README, a newest-version job on an old branch.
+- **Outcome (PR #16):** CI green on 7.0–8.5. Release dry run: 4 builds of 8.5, a 44-archive bundle, and all smoke jobs (official x86_64/aarch64, sury, Remi 8/9) passed on 8.5.
+
+### 1.1 `ig_detect_sqli` wrapper over libinjection
+- **Facts (vendored 4.0.0):**
+  - The fingerprint buffer is 8 bytes: up to 5 tokens plus NUL.
+  - `libinjection_sqli` never returns `ERROR` (only the XSS HTML5 parser does); the mapping is still needed, defensively and for future versions.
+  - Classic payloads give stable fingerprints (`' OR 1=1--` → `s&1c`, `1 UNION SELECT …` → `1UEnk`, `1; DROP TABLE users` → `1;Tnn`).
+  - `O'Reilly`, `Rock 'n' roll`, `I'm here`, Russian text and "drop the table and union with friends" are clean.
+  - An embedded NUL does not hide an attack, because the length is explicit.
+- **Decision:**
+  - `src/core/ig_detect.h`:
+    - `ig_verdict_t` (`IG_CLEAN` 0, `IG_ATTACK` 1, `IG_ERROR` -1);
+    - `ig_result_t { verdict; fingerprint[IG_FINGERPRINT_SIZE = 8] }`;
+    - `ig_detect_sqli(s, len, res)` returns the verdict it stores.
+
+    `truncated` (1.6) and the detector id (1.3) come with their own tasks.
+  - **Contract:**
+    - `res` is always filled;
+    - the fingerprint is always NUL-terminated and non-empty only for `IG_ATTACK`, and it is cleared when `res` is reused;
+    - `res == NULL` → `IG_ERROR`, nothing is written;
+    - `s == NULL` with `len > 0` → `IG_ERROR`;
+    - `s == NULL` with `len == 0` → clean.
+  - **Adapter `src/core/ig_libinjection.{h,c}`:** `ig_li_verdict()` maps FALSE → CLEAN, TRUE → ATTACK, and ERROR or **any unknown value** → ERROR. Unknown is never "clean": `internal_error` and `fail_mode` decide in phase 4. XSS (1.2) shares the adapter.
+  - **No global state:** the libinjection state lives on the stack, so the function is ZTS-safe.
+  - **Fuzz target `fuzz_detect_sqli.c`** checks the invariants: verdict in {-1, 0, 1}, fingerprint NUL-terminated within the buffer and non-empty iff ATTACK.
+- **Tests first:**
+  - 10 attacks with exact fingerprints (updated deliberately together with libinjection);
+  - 13 benign strings → clean with an empty fingerprint;
+  - an embedded NUL, NULL arguments, fingerprint reset on reuse;
+  - the adapter: FALSE / TRUE / ERROR / unknown value.
+

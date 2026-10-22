@@ -1016,3 +1016,37 @@ SEVERITY    = "info" | "low" | "medium" | "high" | "critical" ;
 - `tests/scripts/test-check-php-matrix.sh` на временных деревьях:
   - согласованное дерево проходит;
   - каждое расхождение находится с понятным сообщением: ветка пропущена в phpt-матрице или в build-матрице, неверное число архивов, в smoke нет ветки, у Remi нет новейшей ветки, в README нет ветки, в README устаревший диапазон «7.0–8.4», job новейшей версии запускается на старой ветке.
+
+**Итог (PR #16):** CI зелёный на всей матрице 7.0–8.5. Release dry-run: 4 сборки 8.5 (NTS/ZTS × x86_64/aarch64), `bundle` из 44 архивов, все smoke-задачи (официальные образы x86_64/aarch64, sury, Remi 8/9) прошли и на 8.5.
+
+### 1.1 Обёртка `ig_detect_sqli` над libinjection
+**Факты (проверено на вендоренной 4.0.0):**
+- `libinjection_sqli(s, len, fp)` пишет fingerprint в буфер вызывающего; в `state` буфер занимает 8 байт: до 5 токенов и NUL.
+- Для SQLi функция никогда не возвращает `LIBINJECTION_RESULT_ERROR`, это делает только HTML5-парсер XSS. Перевод `ERROR` всё равно нужен защитно и на будущие версии.
+- Классические payload'ы дают стабильные fingerprint'ы, например `' OR 1=1--` → `s&1c`, `1 UNION SELECT …` → `1UEnk`, `1; DROP TABLE users` → `1;Tnn`.
+- `O'Reilly`, `Rock 'n' roll`, `I'm here`, русский текст и «drop the table and union with friends» не срабатывают.
+- NUL внутри значения не мешает детекции: длина передаётся явно.
+
+**Решение:**
+- `src/core/ig_detect.h`:
+  - `ig_verdict_t`: `IG_CLEAN` = 0, `IG_ATTACK` = 1, `IG_ERROR` = -1;
+  - `ig_result_t { verdict; fingerprint[IG_FINGERPRINT_SIZE = 8] }`;
+  - `ig_verdict_t ig_detect_sqli(const char *s, size_t len, ig_result_t *res)` возвращает тот же вердикт, что пишет в `res`.
+
+  Поля `truncated` (1.6) и идентификатор детектора (1.3) добавятся своими задачами.
+- **Контракт:**
+  - `res` заполняется всегда;
+  - fingerprint всегда завершён NUL и не пуст только при `IG_ATTACK`, при повторном использовании `res` он очищается;
+  - `res == NULL` → `IG_ERROR`, ничего не пишется;
+  - `s == NULL` при `len > 0` → `IG_ERROR`;
+  - `s == NULL` при `len == 0` → `IG_CLEAN`, пустая строка.
+- **Адаптер `src/core/ig_libinjection.{h,c}`:** `ig_li_verdict(injection_result_t)`. `FALSE` → `CLEAN`, `TRUE` → `ATTACK`, `ERROR` и **любое неизвестное значение** → `ERROR`. Неизвестное значение не считается «чисто»: о реакции решают `internal_error` и `fail_mode` (фаза 4). Адаптер общий и для XSS (1.2).
+- **Без глобального состояния:** состояние libinjection лежит на стеке, функция безопасна для ZTS.
+- **Fuzz-таргет `tests/fuzz/fuzz_detect_sqli.c`** проверяет инварианты: вердикт ∈ {-1, 0, 1}, fingerprint завершён NUL в пределах буфера и не пуст тогда и только тогда, когда `ATTACK`. Seed-корпус — несколько payload'ов.
+
+**Тесты (red первыми), `tests/unit/test_detect_sqli.c` и `test_libinjection.c`:**
+- 10 атак с точными fingerprint'ами. При обновлении libinjection они меняются осознанно, вместе с вендорингом.
+- 13 безопасных строк → `CLEAN` с пустым fingerprint.
+- NUL внутри значения; NULL-аргументы; очистка fingerprint при повторном использовании `res`.
+- Адаптер: `FALSE` / `TRUE` / `ERROR` / неизвестное значение.
+

@@ -50,7 +50,7 @@
 
 ## Phase 1. Detection core (pure C, no Zend)
 
-- [ ] **1.1 [TDD]** `ig_detect_sqli()` wrapper over libinjection, fingerprint in result.
+- [x] **1.1 [TDD]** `ig_detect_sqli()` wrapper over libinjection, fingerprint in result.
 - [ ] **1.2 [TDD]** `ig_detect_xss()` wrapper.
 - [ ] **1.3 [TDD]** Common detector interface and registry.
 - [ ] **1.4 [TDD]** Normalizer: repeated URL decoding, NUL removal, `%u` sequences.
