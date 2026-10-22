@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: MIT */
 /*
- * Compatibility layer for PHP 7.0 - 8.4.
+ * Compatibility layer for PHP 7.0 - 8.5.
  *
  * Rules (enforced by scripts/check-compat.sh in CI):
  *  - this is the only file allowed to check PHP/Zend version macros;

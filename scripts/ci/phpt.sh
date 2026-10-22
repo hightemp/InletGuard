@@ -4,8 +4,8 @@
 # Build the extension and run the phpt suite. Meant to run inside an official
 # php:<version>-<cli|zts> image, both in CI and locally:
 #
-#   docker run --rm -v "$PWD:/src:ro" php:8.4-zts sh /src/scripts/ci/phpt.sh
-#   docker run --rm -v "$PWD:/src:ro" php:8.4-cli sh /src/scripts/ci/phpt.sh --asan
+#   docker run --rm -v "$PWD:/src:ro" php:8.5-zts sh /src/scripts/ci/phpt.sh
+#   docker run --rm -v "$PWD:/src:ro" php:8.5-cli sh /src/scripts/ci/phpt.sh --asan
 #   PATH=/opt/php-asan/bin:$PATH SRC=$PWD sh scripts/ci/phpt.sh --asan-native
 #
 # Modes:

@@ -4,7 +4,7 @@
 # Tests for --with-inletguard-modules in config.m4. Needs phpize, so it runs
 # inside a php image:
 #
-#   docker run --rm -v "$PWD:/src:ro" php:8.4-cli sh /src/tests/scripts/test-configure-modules.sh
+#   docker run --rm -v "$PWD:/src:ro" php:8.5-cli sh /src/tests/scripts/test-configure-modules.sh
 
 set -u
 
