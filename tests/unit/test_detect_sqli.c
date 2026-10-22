@@ -53,8 +53,9 @@ IG_TEST(sqli_detects_classic_payloads_with_fingerprint)
 
 		if (v != IG_ATTACK || res.verdict != IG_ATTACK ||
 			strcmp(res.fingerprint, attacks[i].fingerprint) != 0) {
-			ig_test_fail(__FILE__, __LINE__, "\"%s\": verdict %d/%d, fingerprint \"%s\", expected \"%s\"",
-				p, (int)v, (int)res.verdict, res.fingerprint, attacks[i].fingerprint);
+			ig_test_fail(__FILE__, __LINE__,
+				"\"%s\": verdict %d/%d, fingerprint \"%s\", expected \"%s\"", p, (int)v,
+				(int)res.verdict, res.fingerprint, attacks[i].fingerprint);
 			return;
 		}
 	}
