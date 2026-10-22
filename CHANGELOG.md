@@ -8,7 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 - Extension skeleton with `InletGuard\version()`.
-- CI on PHP 7.0–8.4 (NTS and ZTS), sanitizers, Valgrind, aarch64.
+- CI on PHP 7.0–8.5 (NTS and ZTS), sanitizers, Valgrind, aarch64.
 - Release pipeline (dry run until v1.0.0) with portable builds.
 - Bundled libinjection 4.0.0 (BSD-3-Clause), built unmodified.
 - `./configure --with-inletguard-modules=LIST` selects the attack modules to

@@ -10,7 +10,7 @@
 > `docs/adr/`. **[INFRA]** — build, CI, docs.
 >
 > **Definition of done:** test written before code (red → green visible in
-> history); green on PHP 7.0–8.4 × NTS/ZTS; ASan/UBSan clean; no warnings
+> history); green on PHP 7.0–8.5 × NTS/ZTS; ASan/UBSan clean; no warnings
 > with `-Werror`; everything in English.
 >
 > **Modularity:** every attack class is a module (PRD FR-10) that can be
@@ -46,6 +46,7 @@
 - [x] **0.12 [INFRA]** Licensing: MIT `LICENSE`, `THIRD_PARTY_NOTICES`, SPDX headers, CI check.
 - [x] **0.13 [SPIKE]** Pool/vhost configuration → ADR-009: pool values only in workers, vhost values per request; 7.0–7.1 `php_value` hole closed by an `OnUpdate` stage guard; startup directives from the global ini only.
 - [x] **0.14 [INFRA]** Build flags for modules: `--with-inletguard-modules=all|none|list|all,-m` (same syntax as `inletguard.modules`; no separate `--disable-inletguard-<m>`), configure fails on unknown modules, `phpinfo()` row, CI job `phpt-minimal-modules`.
+- [x] **0.15 [INFRA]** PHP 8.5 support: 8.5 in every matrix (phpt, ASan, Valgrind, aarch64, minimal modules, 44 release builds, smoke on official images, sury and Remi); `scripts/check-php-matrix.sh` in `lint` checks every branch list against `php-versions.txt`; docs say 7.0–8.5.
 
 ## Phase 1. Detection core (pure C, no Zend)
 

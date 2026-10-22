@@ -61,7 +61,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        php: ['7.0', '7.1', '7.2', '7.3', '7.4', '8.0', '8.1', '8.2', '8.3', '8.4']
+        php: ['7.0', '7.1', '7.2', '7.3', '7.4', '8.0', '8.1', '8.2', '8.3', '8.4', '8.5']
         variant: [nts, zts]
         arch: [x86_64, aarch64]
     env:
@@ -117,8 +117,8 @@ jobs:
         run: |
           version=$(sh scripts/release/version.sh)
           count=$(find dist -name '*.tar.gz' | wc -l)
-          if [ "$count" -ne 40 ]; then
-            echo "expected 40 binary archives, got $count"
+          if [ "$count" -ne 44 ]; then
+            echo "expected 44 binary archives, got $count"
             exit 1
           fi
           git archive --prefix="inletguard-$version/" -o "dist/inletguard-$version.tar.gz" HEAD
@@ -142,19 +142,19 @@ jobs:
         include:
           - name: official images (x86_64)
             runner: ubuntu-24.04
-            run: sh scripts/release/smoke-official.sh dist 7.0 7.1 7.2 7.3 7.4 8.0 8.1 8.2 8.3 8.4
+            run: sh scripts/release/smoke-official.sh dist 7.0 7.1 7.2 7.3 7.4 8.0 8.1 8.2 8.3 8.4 8.5
           - name: official images (aarch64)
             runner: ubuntu-24.04-arm
-            run: sh scripts/release/smoke-official.sh dist 7.0 7.1 7.2 7.3 7.4 8.0 8.1 8.2 8.3 8.4
+            run: sh scripts/release/smoke-official.sh dist 7.0 7.1 7.2 7.3 7.4 8.0 8.1 8.2 8.3 8.4 8.5
           - name: debian 12 + packages.sury.org
             runner: ubuntu-24.04
-            run: docker run --rm -v "$PWD:/src:ro" -v "$PWD/dist:/dist:ro" debian:12 sh /src/scripts/release/smoke-debian-sury.sh /dist 7.0 7.1 7.2 7.3 7.4 8.0 8.1 8.2 8.3 8.4
+            run: docker run --rm -v "$PWD:/src:ro" -v "$PWD/dist:/dist:ro" debian:12 sh /src/scripts/release/smoke-debian-sury.sh /dist 7.0 7.1 7.2 7.3 7.4 8.0 8.1 8.2 8.3 8.4 8.5
           - name: almalinux 8 + remi
             runner: ubuntu-24.04
-            run: docker run --rm -v "$PWD:/src:ro" -v "$PWD/dist:/dist:ro" almalinux:8 sh /src/scripts/release/smoke-remi.sh /dist 7.2 7.3 7.4 8.0 8.1 8.2 8.3 8.4
+            run: docker run --rm -v "$PWD:/src:ro" -v "$PWD/dist:/dist:ro" almalinux:8 sh /src/scripts/release/smoke-remi.sh /dist 7.2 7.3 7.4 8.0 8.1 8.2 8.3 8.4 8.5
           - name: almalinux 9 + remi
             runner: ubuntu-24.04
-            run: docker run --rm -v "$PWD:/src:ro" -v "$PWD/dist:/dist:ro" almalinux:9 sh /src/scripts/release/smoke-remi.sh /dist 7.4 8.0 8.1 8.2 8.3 8.4
+            run: docker run --rm -v "$PWD:/src:ro" -v "$PWD/dist:/dist:ro" almalinux:9 sh /src/scripts/release/smoke-remi.sh /dist 7.4 8.0 8.1 8.2 8.3 8.4 8.5
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2

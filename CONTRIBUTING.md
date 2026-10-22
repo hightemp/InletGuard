@@ -26,7 +26,7 @@
 ## Definition of done
 
 - Tests were written before the code (red → green is visible in history).
-- Green on the full matrix: PHP 7.0–8.4 × NTS/ZTS.
+- Green on the full matrix: PHP 7.0–8.5 × NTS/ZTS.
 - AddressSanitizer/UBSan clean, no compiler warnings with
   `--enable-inletguard-dev` (`-Werror`).
 - New files carry an `SPDX-License-Identifier: MIT` header.

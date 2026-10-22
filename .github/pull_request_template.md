@@ -7,7 +7,7 @@
 - [ ] Implementation note added to `PRD.ru.md` and `PRD.md` (section 13) before coding
 - [ ] Changes to PRD/TASKS made in both language versions
 - [ ] Tests written first and seen failing (red → green)
-- [ ] Passes on the full matrix (PHP 7.0–8.4 × NTS/ZTS), ASan clean
+- [ ] Passes on the full matrix (PHP 7.0–8.5 × NTS/ZTS), ASan clean
 - [ ] Code, comments, messages and docs are in English
 - [ ] New files carry an `SPDX-License-Identifier: MIT` header
 - [ ] User-visible changes added to `CHANGELOG.md` under `[Unreleased]`

@@ -4,7 +4,7 @@
 
 > **Языковые соглашения.** Проект ведётся **на английском**: исходный код, идентификаторы, комментарии, сообщения в логах и ошибках, PHP-предупреждения, тесты, коммиты, `README.md`, `CHANGELOG.md`, `docs/`, ADR. **На русском — только `PRD.ru.md` и `TASKS.ru.md`** (первоисточник). `PRD.md` и `TASKS.md` — базовые английские версии для внешних участников; при расхождении действует русская версия. **Любое изменение вносится в оба файла пары** (`PRD.ru.md`+`PRD.md`, `TASKS.ru.md`+`TASKS.md`); английская версия может быть короче, но не может отставать.
 
-> **Поддерживаемые версии PHP: 7.0 – 8.4** (NTS и ZTS, Linux). Нижняя граница выбрана под shared-хостинги, где до сих пор массово встречаются 7.x (cPanel/CloudLinux alt-php, ISPmanager); охватываем всю ветку 7.x. PHP 5.x не поддерживается — у него принципиально другой Zend API.
+> **Поддерживаемые версии PHP: 7.0 – 8.5** (NTS и ZTS, Linux). Нижняя граница выбрана под shared-хостинги, где до сих пор массово встречаются 7.x (cPanel/CloudLinux alt-php, ISPmanager); охватываем всю ветку 7.x. PHP 5.x не поддерживается — у него принципиально другой Zend API.
 
 ## 1. Обзор
 
@@ -297,7 +297,7 @@ class SqlInjectionException extends \RuntimeException {}
 | NFR-1 Производительность | Накладные расходы на типичный запрос (20 параметров по ~50 байт) — < 50 мкс; перехват SQL — < 10 мкс на запрос к БД без совпадений. Бенчмарк в CI. |
 | NFR-2 Надёжность | Нет падений и утечек памяти: все тесты проходят под ASan/UBSan и Valgrind (`USE_ZEND_ALLOC=0`). Fuzzing нормализатора и детектора ≥ 1 ч без находок перед релизом. |
 | NFR-3 Fail-open | Любая внутренняя ошибка → событие `internal_error` в лог, запрос продолжается. |
-| NFR-4 Совместимость | PHP 7.0, 7.1, 7.2, 7.3, 7.4, 8.0, 8.1, 8.2, 8.3, 8.4; NTS и ZTS; SAPI: FPM, CGI, Apache mod_php, CLI, LiteSpeed (LSAPI — частый на хостингах). Совместимость с ext/filter (цепочка input_filter). Linux x86_64 и aarch64. Различия Zend API изолированы в `src/zend/php_compat.h`; в остальном коде нет `#if PHP_VERSION_ID`. |
+| NFR-4 Совместимость | PHP 7.0, 7.1, 7.2, 7.3, 7.4, 8.0, 8.1, 8.2, 8.3, 8.4, 8.5; NTS и ZTS; SAPI: FPM, CGI, Apache mod_php, CLI, LiteSpeed (LSAPI — частый на хостингах). Совместимость с ext/filter (цепочка input_filter). Linux x86_64 и aarch64. Различия Zend API изолированы в `src/zend/php_compat.h`; в остальном коде нет `#if PHP_VERSION_ID`. |
 | NFR-5 Точность | На корпусе атак: детекция SQLi ≥ 95 %, XSS ≥ 90 %. На корпусе легитимных данных: ложные срабатывания < 0.5 %. |
 | NFR-6 Безопасность кода | `-Wall -Wextra -Werror`, cppcheck/clang-tidy без ошибок, нет `strcpy/sprintf` без ограничения длины. |
 | NFR-7 Сборка | Стандартно: `phpize && ./configure --enable-inletguard && make && make test`. Код на C99 — собирается старыми тулчейнами хостингов (GCC ≥ 4.8, CentOS 7 / CloudLinux 7). libinjection вендорится в `third_party/`. Установка: PECL (`package.xml`, все версии) и PIE (`composer.json` с `type: php-ext`, для 8.x). Готовые `.so` под популярные версии — в релизах. |
@@ -352,7 +352,7 @@ class SqlInjectionException extends \RuntimeException {}
 | Ложные срабатывания XSS на легитимном HTML (WYSIWYG) | Режим monitor по умолчанию, `xss.exclude_params`, корпус легитимных данных в тестах |
 | Обход через кодировки | Нормализатор + fuzz/корпус обходов |
 | Конфликт с другими расширениями (Xdebug, APM, Snuffleupagus), хукающими те же функции | Сохранять и вызывать оригинальный handler; интеграционные тесты с Xdebug |
-| Различия внутреннего API между 7.0 … 8.4 (arginfo, `zend_string`/`zend_object` handlers, `ZEND_ACC_*`, `zend_parse_parameters`, сигнатуры хуков, `gen_stub.php` есть только с 8.0) | Матрица CI на все 10 версий × NTS/ZTS, единый слой `php_compat.h`, arginfo для 7.x пишется вручную/генерируется в legacy-режиме |
+| Различия внутреннего API между 7.0 … 8.5 (arginfo, `zend_string`/`zend_object` handlers, `ZEND_ACC_*`, `zend_parse_parameters`, сигнатуры хуков, `gen_stub.php` есть только с 8.0) | Матрица CI на все 11 версий × NTS/ZTS, единый слой `php_compat.h`, arginfo для 7.x пишется вручную/генерируется в legacy-режиме |
 | Старые версии PHP (7.0–8.0) больше не обновляются официально, Docker-образы и тулчейны устаревают | Закреплённые образы в CI, собственный кэш сборок PHP; поддержка 7.x пересматривается раз в год |
 | Краш в C-коде = падение сайта | ASan/Valgrind/fuzzing в CI, fail-open |
 | Sanitize ломает бизнес-логику | Явно документировано; не дефолтный режим |
@@ -378,7 +378,7 @@ class SqlInjectionException extends \RuntimeException {}
 | Fuzz | libFuzzer таргеты на core/ | краши на произвольном вводе |
 | Perf | бенчмарк-скрипт + `hyperfine`/внутренний таймер | NFR-1 |
 
-Definition of Done для любой задачи: тесты написаны **до** кода, все тесты зелёные на матрице 7.0–8.4 × NTS/ZTS, ASan чистый, нет предупреждений компилятора. `.phpt`-тесты одни и те же для всех версий; расхождения в выводе между версиями допускаются только через `--EXPECTF--`, а не через разные тесты.
+Definition of Done для любой задачи: тесты написаны **до** кода, все тесты зелёные на матрице 7.0–8.5 × NTS/ZTS, ASan чистый, нет предупреждений компилятора. `.phpt`-тесты одни и те же для всех версий; расхождения в выводе между версиями допускаются только через `--EXPECTF--`, а не через разные тесты.
 
 Спайки (исследовательские прототипы в фазе 0) выполняются без TDD, их код выбрасывается; выводы фиксируются в `docs/adr/`.
 
@@ -388,7 +388,7 @@ Definition of Done для любой задачи: тесты написаны *
 
 | Workflow | Триггер | Что делает |
 |---|---|---|
-| `ci.yml` | push, pull request | Lint (`clang-format --dry-run`, `cppcheck`, `clang-tidy`), проверка лицензий/SPDX, C unit-тесты, `.phpt` на матрице 7.0–8.4 × NTS/ZTS, ASan/UBSan, Valgrind, сборка старым тулчейном (GCC 4.8, glibc 2.17), aarch64 (ARM-раннеры), сборка с минимальным набором модулей; сервисы БД/Redis/Memcached — по мере появления фаз |
+| `ci.yml` | push, pull request | Lint (`clang-format --dry-run`, `cppcheck`, `clang-tidy`), проверка лицензий/SPDX, C unit-тесты, `.phpt` на матрице 7.0–8.5 × NTS/ZTS, ASan/UBSan, Valgrind, сборка старым тулчейном (GCC 4.8, glibc 2.17), aarch64 (ARM-раннеры), сборка с минимальным набором модулей; сервисы БД/Redis/Memcached — по мере появления фаз |
 | `nightly.yml` | cron, ручной запуск | Fuzzing (ограниченное время на таргет), метрики корпусов, бенчмарки с порогами, полный интеграционный стенд |
 | `release.yml` | тег `v*`, ручной запуск (dry-run), push в `main` (dry-run) | Сборка релизных артефактов, упаковка, smoke-тесты, публикация — по политике 9.2 |
 
@@ -399,7 +399,7 @@ Definition of Done для любой задачи: тесты написаны *
 ### 9.2 Релизный конвейер и политика публикации
 
 - **Артефакты** (собираются уже с фазы 0, на пустом расширении):
-  - `.so` для каждой версии PHP × NTS/ZTS × x86_64/aarch64 (40 сборок), собранные в контейнере с glibc 2.17 (NFR-11);
+  - `.so` для каждой версии PHP × NTS/ZTS × x86_64/aarch64 (44 сборки), собранные в контейнере с glibc 2.17 (NFR-11);
   - архив на каждую сборку: `inletguard-<ver>-php<X.Y>-<nts|zts>-<arch>-linux-gnu.tar.gz` с `.so`, `20-inletguard.ini` (FR-13.1), `README.md`, `LICENSE`, `THIRD_PARTY_NOTICES`;
   - PECL-пакет `inletguard-<ver>.tgz` (`package.xml`), `composer.json` для PIE;
   - `SHA256SUMS` и attestations сборки (`actions/attest-build-provenance`).
@@ -981,3 +981,38 @@ SEVERITY    = "info" | "low" | "medium" | "high" | "critical" ;
 - phpt `004-compiled-modules.phpt`: строка «Compiled-in modules» в `phpinfo(INFO_MODULES)` равна ожидаемой (`IG_EXPECT_MODULES`, по умолчанию `sqli, xss`).
 - `tests/scripts/test-configure-modules.sh` (в контейнере с PHP): `all` → `sqli, xss`; `sqli` → `sqli`; `all,-xss` → `sqli`; `none` → `none`; `bogus`, `sqli,bogus`, `all,-bogus`, пустое значение → `configure` падает с понятной ошибкой.
 - CI-job `phpt-minimal-modules`: сборка с `--with-inletguard-modules=sqli`, весь phpt с `IG_EXPECT_MODULES=sqli`, плюс тест configure.
+
+### 0.15 Поддержка PHP 8.5
+**Факты (проверено 2026-10-22):**
+- PHP 8.5.12 (21.10.2026); SHA256 для `.tar.xz` публикует php.net.
+- Официальные образы `php:8.5-cli` и `php:8.5-zts` есть для amd64 и arm64.
+- Пакеты есть у `packages.sury.org` для Debian 12 (`php8.5-cli/cgi/dev`) и у Remi для EL8 и EL9 (`php85`).
+- Локально без изменений кода всё проходит:
+  - phpt NTS и ZTS зелёные с `-Werror`;
+  - ASan через dlopen-shim ловит намеренную ловушку так же, как на 8.4;
+  - Valgrind чистый, `test-configure-modules.sh` проходит;
+  - PHP 8.5 собирается из исходников в manylinux2014 x86_64, расширение на нём собирается и проходит phpt, архив упаковывается.
+
+**Решение:**
+- **Матрицы.** Ветка 8.5 добавляется во все матрицы:
+  - phpt — 11 веток × NTS/ZTS;
+  - релизные сборки — 44, `bundle` проверяет число 44;
+  - smoke — официальные образы x86_64 и aarch64, Debian 12 + sury, AlmaLinux 8/9 + Remi.
+- **Jobs самой новой версии.** ASan с shim, Valgrind, aarch64 и минимальный набор модулей переходят с 8.4 на 8.5. ASan остаётся и на 8.1, самой старой версии, где работает shim. 8.4 по-прежнему проверяется основной матрицей.
+- **Единый источник списка веток** — `scripts/release/php-versions.txt`. Новый `scripts/check-php-matrix.sh` (job `lint`) сверяет с ним:
+  - матрицу `phpt` в `ci.yml` и матрицу `build` в `release.yml`;
+  - ожидаемое число архивов в `bundle` (ветки × 4);
+  - списки веток в smoke: для официальных образов и sury — все ветки, для Remi — непрерывный хвост списка, заканчивающийся новейшей веткой;
+  - jobs новейшей версии в `ci.yml`;
+  - строку версий в `README.md` и диапазоны «7.0–X» в `README.md`, `CONTRIBUTING.md`, шаблоне PR и `php_compat.h`.
+
+  Добавление 8.6 сводится к строке в `php-versions.txt` и правкам, на которые укажет проверка.
+- **Frameless-функции.** В 8.5 их список мог измениться. ADR-003 (п. 3) не зависит от списка: `frameless_function_infos` обнуляется у каждой перехватываемой функции, у которой они есть. Проверяется при реализации стоков (8.3, 12.5).
+- **Версия 8.4** в `php-versions.txt` не обновляется: patch-релиз не меняет ABI.
+- В PRD и TASKS утверждения о поддерживаемых версиях («7.0–8.4», 10 версий, 40 сборок) заменяются на 7.0–8.5. Исторические заметки о выполненных задачах не меняются.
+
+**Тесты (red первыми):**
+- `test-release-scripts.sh` ожидает ветки 7.0–8.5.
+- `tests/scripts/test-check-php-matrix.sh` на временных деревьях:
+  - согласованное дерево проходит;
+  - каждое расхождение находится с понятным сообщением: ветка пропущена в phpt-матрице или в build-матрице, неверное число архивов, в smoke нет ветки, у Remi нет новейшей ветки, в README нет ветки, в README устаревший диапазон «7.0–8.4», job новейшей версии запускается на старой ветке.
