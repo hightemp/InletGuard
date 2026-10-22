@@ -18,7 +18,7 @@ PHP_ARG_ENABLE([inletguard-dev],
   [no], [no])
 
 if test "$PHP_INLETGUARD" != "no"; then
-  IG_SOURCES="inletguard.c src/core/ig_version.c src/core/ig_detect.c src/core/ig_libinjection.c src/core/ig_detector.c"
+  IG_SOURCES="inletguard.c src/core/ig_version.c src/core/ig_detect.c src/core/ig_libinjection.c src/core/ig_detector.c src/core/ig_normalize.c"
 
   IG_CFLAGS="-DZEND_ENABLE_STATIC_TSRMLS_CACHE=1 -std=gnu99"
   if test "$PHP_INLETGUARD_DEV" != "no"; then

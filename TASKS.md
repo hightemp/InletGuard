@@ -53,7 +53,7 @@
 - [x] **1.1 [TDD]** `ig_detect_sqli()` wrapper over libinjection, fingerprint in result.
 - [x] **1.2 [TDD]** `ig_detect_xss()` wrapper.
 - [x] **1.3 [TDD]** Common detector interface and registry.
-- [ ] **1.4 [TDD]** Normalizer: repeated URL decoding, NUL removal, `%u` sequences.
+- [x] **1.4 [TDD]** Normalizer: repeated URL decoding, NUL removal, `%u` sequences.
 - [ ] **1.5 [TDD]** HTML entity decoding for XSS.
 - [ ] **1.6 [TDD]** Length limit with `truncated` flag.
 - [ ] **1.7 [TDD]** Glob matcher for exclusions.
