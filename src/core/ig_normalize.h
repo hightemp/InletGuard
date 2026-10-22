@@ -30,4 +30,21 @@ size_t ig_url_decode(const char *in, size_t len, char *out, unsigned int flags);
 size_t ig_normalize(const char *in, size_t len, unsigned int rounds, unsigned int flags, char *out,
 	ig_norm_stats_t *stats);
 
+/* A named character reference: `name` without '&' and ';'. Legacy names
+ * are also recognised without the ';'. */
+typedef struct ig_html_entity {
+	const char *name;
+	const char *value; /* UTF-8 */
+	int legacy;
+} ig_html_entity_t;
+
+/* The named references ig_html_decode() knows: the attack-relevant subset of
+ * HTML5. Sets *count. */
+const ig_html_entity_t *ig_html_entities(size_t *count);
+
+/* One pass of HTML character reference decoding: &#N, &#xH (';' optional,
+ * invalid code points -> U+FFFD) and the names of ig_html_entities().
+ * Anything else is copied as is. Same buffer rules as ig_url_decode(). */
+size_t ig_html_decode(const char *in, size_t len, char *out);
+
 #endif /* IG_NORMALIZE_H */

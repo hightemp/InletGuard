@@ -639,3 +639,28 @@ optional Redis/Memcached.
     - NUL raw and `%00`; `%%0041`;
     - `rounds = 0`; the output is never longer; NULL arguments.
   - Fuzz target `fuzz_normalize`: output ≤ input and NUL-free, in-place = separate buffer, a round never grows the value.
+
+### 1.5 HTML entity decoding for XSS
+- **Context:**
+  - Browsers decode character references in attribute values before parsing a URL, so `href="&#106;avascript:alert(1)"` and `java&Tab;script&colon;alert&lpar;1&rpar;` run, while `ig_detect_xss` misses them in the raw value (note to 1.2).
+  - Pipeline order (wired in phases 2/4): URL normalization (1.4) → HTML decoding → `ig_detect_xss` on the decoded copy. This also catches `%26%23106%3B` → `&#106;` → `j`.
+- **Decision** (`src/core/ig_normalize.{h,c}`): `size_t ig_html_decode(const char *in, size_t len, char *out)`, one pass, HTML5 character reference rules.
+  - **Numeric:** `&#` + decimal digits or `&#x`/`&#X` + hex digits; `;` optional; any number of leading zeros.
+    - The code point is written as UTF-8 (1–4 bytes).
+    - `0`, surrogates and values above `10FFFF` (including overflow) become U+FFFD, as in browsers, so no NUL appears.
+    - No digits (`&#;`, `&#x;`) → copied as is. The windows-1252 mapping of `&#128;`–`&#159;` is out of scope.
+  - **Named:** a subset of the 2231 HTML5 names that yields attack-relevant characters.
+    - Legacy names also accepted without `;`: `amp`, `lt`, `gt`, `quot` (and `AMP`, `LT`, `GT`, `QUOT`), `nbsp`.
+    - `;` required: `apos`, `colon`, `lpar`, `rpar`, `Tab`, `NewLine`, `sol`, `bsol`, `grave`, `equals`, `semi`, `comma`, `period`, `excl`, `quest`, `num`, `percnt`, `plus`, `ast`, `commat`, `lowbar`, `verbar`, `vert`, `lsqb`, `lbrack`, `rsqb`, `rbrack`, `lcub`, `lbrace`, `rcub`, `rbrace`, `dollar`, `Hat`.
+    - Case-sensitive as in HTML5; unknown names are copied as is.
+    - The attribute rule (a legacy name without `;` before an alphanumeric or `=` is not decoded) is not applied: the context is unknown and the detector should see more. The false-positive cost is measured by the corpus in 1.8.
+  - **The output is never longer than the input:** a numeric reference yields no more bytes than it occupies (U+FFFD is 3 bytes from at least `&#0`), and each named value is shorter than its name (checked by a test). An `out` of `len` bytes is enough; in-place decoding is allowed.
+  - **One pass.** Browsers expand `&amp;#106;` once, and so do we; a second pass would turn safe text into markup.
+  - No allocation, no state, ZTS-safe.
+- **Tests first** (`tests/unit/test_html_decode.c`):
+  - numeric: decimal and hex, both `x` cases, with and without `;`, leading zeros, multi-byte UTF-8;
+  - U+FFFD for `&#0;`, a surrogate, `&#x110000;` and overflow; no digits → kept;
+  - named: legacy with and without `;`, `;`-only names not decoded without `;`, case, unknown name, trailing `&`, `&&lt;`;
+  - in place, empty input, NULL arguments; table: every value shorter than its name;
+  - with `ig_detect_xss`: `&#106;avascript:alert(1)`, `java&Tab;script&colon;alert&lpar;1&rpar;`, `&lt;script&gt;…` are ATTACK after decoding; `Tom &amp; Jerry` is clean.
+  - Fuzz target `fuzz_html_decode`: output ≤ input, in place = separate buffer, no new NUL.
