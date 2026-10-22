@@ -590,3 +590,22 @@ optional Redis/Memcached.
   - embedded NUL, NULL arguments, reuse of `res`.
   - The fuzz target covers both detectors.
 
+
+### 1.3 Detector interface `ig_detector_t` and registry
+- **Decision:**
+  - **Descriptor** in `src/core/ig_detector.h`: `{ const char *name; unsigned int mask; ig_detect_fn detect; }`, where `ig_detect_fn` has the `ig_detect_sqli` signature. Detectors are stateless and ZTS-safe.
+  - **Names** are module IDs (`sqli`, `xss`).
+  - **Bits** are **stable** (`IG_DETECT_SQLI = 1u << 0`, `IG_DETECT_XSS = 1u << 1`) and become the PHP API constants for `inspect()` (5.3/8.10). New detectors take the next free bit.
+  - **Registry:** a static const table in `ig_detector.c` with no mutable global state. API:
+    - `ig_detector_count()` and `ig_detector_at(i)` (`NULL` out of range);
+    - `ig_detector_find(name, len)` (exact, case-sensitive);
+    - `ig_detector_by_mask(bit)` (`NULL` unless exactly one known bit).
+  - **Table invariants** (unique non-empty names, one unique bit each, non-NULL `detect`) are checked by a test, not at runtime.
+  - **Out of scope:** dropping detectors excluded from the build moves to the module registry (2.8); iterating a mask for `inspect()` belongs to 5.3.
+- **Tests first** (`tests/unit/test_detector.c`):
+  - the registry holds exactly `sqli` and `xss` with their bits;
+  - the table invariants;
+  - lookup by name: found, unknown, other case, prefix, `NULL`;
+  - lookup by bit: found, 0, several bits, unknown bit;
+  - `ig_detector_at` out of range;
+  - registry `detect` gives the same verdicts as the direct functions.
