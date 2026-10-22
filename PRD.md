@@ -87,7 +87,10 @@ for 1–2 weeks → `inletguard-learn` → apply exclusions → remove `mode=mon
   decoding, NUL removal, HTML entity decoding for XSS. Length and count
   limits. Runs before the script. Disabled in CLI by default.
 - **FR-2 Detectors.** `libinjection_sqli` (fingerprint is logged),
-  `libinjection_xss`; a common detector interface for future classes.
+  `libinjection_xss` plus our own check for a dangerous URL scheme at the
+  start of a value (`javascript:`, `vbscript:`, HTML/SVG `data:`), which
+  libinjection misses (note 1.2); a common detector interface for future
+  classes.
 - **FR-3 SQL hooks (RASP).** `mysqli_*`, `PDO::query/exec/prepare`, `pg_*`,
   `SQLite3::*`. A user value found verbatim in the query must fit inside a
   single literal token; leaking into operators/keywords/comments is an
@@ -211,7 +214,10 @@ False positives on rich HTML; encoding bypasses; conflicts with other
 extensions hooking the same functions (Xdebug, APM); Zend API differences
 across 7.0–8.5; C bugs crashing sites; aging images for EOL PHP versions;
 overhead of many hooks; SSRF bypasses (DNS rebinding, URL parser
-differentials). Mitigations: monitor/learn, corpora, fuzzing, sanitizers,
+differentials); libinjection does not catch everything (published SQLi bypasses,
+weaker XSS part, bare `javascript:` URLs) — kept by decision of 2026-10-22 as
+one signal among several, isolated behind the detector interface, and reviewed
+against corpus metrics (1.8). Mitigations: monitor/learn, corpora, fuzzing, sanitizers,
 `php_compat.h`, CI matrix, performance budgets — see `PRD.ru.md` section 8.
 
 ## 9. Testing strategy (TDD)
@@ -560,3 +566,27 @@ optional Redis/Memcached.
   - planted bugs fail and name the file: uninitialized value, double free, `signed char`, a bug in a `src/core` header;
   - `third_party/` is ignored;
   - a missing `clang-tidy` fails.
+
+### 1.2 `ig_detect_xss`
+- **Facts (vendored 4.0.0):**
+  - `libinjection_xss` catches `<script>`, `onerror=`, `<svg onload>`, `href="javascript:…"`, mixed case, breaking out of an attribute (`"><script>`), `style=url(javascript:…)` and an attack after an embedded NUL.
+  - `<b>`, `<p class>`, `<a href="https://…">`, `<img src alt>`, `2 < 3`, `I <3 you` and Russian text with `<b>` are clean.
+  - It does **not** catch a bare `javascript:alert(1)`, which is XSS when the application puts the value into `href`/`src`.
+  - The HTML5 parser can return `ERROR`, and `libinjection_xss` passes it on.
+- **Decision:**
+  - `ig_detect_xss(s, len, res)` has the same contract as `ig_detect_sqli`.
+  - XSS has no libinjection fingerprint, so the field names **what fired**: `html` (libinjection) or `url` (our scheme check). This helps triage false positives, and the rule "non-empty iff ATTACK" still holds.
+  - Order: libinjection first; if it is not an attack, the scheme check runs. A scheme match beats a libinjection `ERROR` (evidence of an attack wins); otherwise `ERROR` stays `ERROR`.
+  - **Scheme check** (WHATWG URL parsing as browsers do it):
+    1. skip leading C0 controls and spaces (≤ 0x20);
+    2. ignore ASCII tab/LF/CR anywhere in the scheme;
+    3. compare case-insensitively with `javascript:`, `vbscript:`, or `data:` followed by `text/html`, `image/svg+xml` or `application/xhtml+xml`.
+  - **False positives:** "JavaScript: The Good Parts" in a text field must stay clean, so `javascript:`/`vbscript:` count only when the rest contains a code character `(`, `` ` `` or `=`. Attack forms always have one: `alert(1)`, ``alert`1` ``, `location=…`, `throw onerror=…`. For `data:` the MIME type is enough.
+  - HTML entities (`&#106;avascript:`) and URL encoding are handled by the normalizers (1.4/1.5), not here.
+- **Tests first** (`tests/unit/test_detect_xss.c`):
+  - HTML attacks → `html`;
+  - scheme attacks → `url` (case, leading spaces/controls, tab/newline inside the scheme, `data:text/html`, `data:image/svg+xml`);
+  - benign HTML and text, `JavaScript: The Good Parts`, `data:image/png`, `https://…`, `javascript` without a colon → clean;
+  - embedded NUL, NULL arguments, reuse of `res`.
+  - The fuzz target covers both detectors.
+
