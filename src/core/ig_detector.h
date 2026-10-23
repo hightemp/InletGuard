@@ -32,4 +32,10 @@ const ig_detector_t *ig_detector_find(const char *name, size_t len);
 /* NULL unless bit is exactly one known IG_DETECT_* bit. */
 const ig_detector_t *ig_detector_by_mask(unsigned int bit);
 
+/* Runs d on the first ig_limit_len(len, max_len) bytes of s and records
+ * res->truncated. IG_ERROR (also in *res) when d is NULL; IG_ERROR without
+ * writing when res is NULL. */
+ig_verdict_t ig_detector_run(
+	const ig_detector_t *d, const char *s, size_t len, size_t max_len, ig_result_t *res);
+
 #endif /* IG_DETECTOR_H */

@@ -55,7 +55,7 @@
 - [x] **1.3 [TDD]** Common detector interface and registry.
 - [x] **1.4 [TDD]** Normalizer: repeated URL decoding, NUL removal, `%u` sequences.
 - [x] **1.5 [TDD]** HTML entity decoding for XSS.
-- [ ] **1.6 [TDD]** Length limit with `truncated` flag.
+- [x] **1.6 [TDD]** Length limit with `truncated` flag.
 - [ ] **1.7 [TDD]** Glob matcher for exclusions.
 - [ ] **1.8 [TDD]** Corpus runner with accuracy thresholds (NFR-5).
 - [ ] **1.9 [TDD]** False positive regression process.

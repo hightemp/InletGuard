@@ -20,7 +20,13 @@ typedef struct ig_result {
 	ig_verdict_t verdict;
 	/* Always NUL-terminated; non-empty only for IG_ATTACK. */
 	char fingerprint[IG_FINGERPRINT_SIZE];
+	/* Only a prefix of the value was checked (FR-1.4). */
+	int truncated;
 } ig_result_t;
+
+/* Length to inspect: min(len, max_len), where max_len == 0 means no limit.
+ * Sets *truncated (if not NULL) when the value is longer than the limit. */
+size_t ig_limit_len(size_t len, size_t max_len, int *truncated);
 
 /* Checks s[0..len) for SQL injection. Fills *res and returns res->verdict;
  * returns IG_ERROR without writing when res is NULL. */
