@@ -664,3 +664,17 @@ optional Redis/Memcached.
   - in place, empty input, NULL arguments; table: every value shorter than its name;
   - with `ig_detect_xss`: `&#106;avascript:alert(1)`, `java&Tab;script&colon;alert&lpar;1&rpar;`, `&lt;script&gt;…` are ATTACK after decoding; `Tom &amp; Jerry` is clean.
   - Fuzz target `fuzz_html_decode`: output ≤ input, in place = separate buffer, no new NUL.
+
+### 1.6 Length limit, `truncated` flag
+- **Context:** FR-1.4 — a value longer than `inletguard.inspect_max_len` (default 8192 bytes) is checked by its prefix, so the cost does not grow with the input. The `limit_exceeded` event and the policy for such values come in 4.6; the core only cuts and reports.
+- **Decision:**
+  - `ig_result_t` gains `int truncated`. Detectors reset it with the fingerprint (`ig_detect_begin`), so a reused `res` does not keep a stale value.
+  - `size_t ig_limit_len(size_t len, size_t max_len, int *truncated)` in `src/core/ig_detect.h` returns `min(len, max_len)` and sets `*truncated = len > max_len`. `max_len = 0` means no limit (ini validation is in 2.x); `truncated` may be `NULL`.
+  - `ig_detector_run(d, s, len, max_len, res)` in `src/core/ig_detector.h` applies the limit, runs `d->detect` on the prefix and records `res->truncated`. `NULL` `d` or `res` gives `IG_ERROR`. It is the single entry point for `inspect()` (5.3) and the pipeline (phase 4).
+  - **Pipeline order:** the limit applies to the raw value **before** normalization. Normalization never grows a value (1.4, 1.5), so its buffer is at most `max_len` and its time is bounded. The pipeline carries the flag from `ig_limit_len` into the result itself.
+  - **Byte cut**, not aligned to UTF-8 or `%XX`: a cut sequence stays invalid and is copied as is (1.4), which does not affect detection. UTF-8 validity in logs is the serializer's job (phase 3).
+  - **Known bypass:** an attack after 8 KB of padding is not seen. This is the accepted cost of FR-1.4; the defence is `truncated` → `limit_exceeded` in the log and an option to block such requests (4.6).
+- **Tests first:**
+  - `tests/unit/test_limit.c`: `ig_limit_len` below, at and above the limit, `max_len = 0`, `NULL` flag, `len = 0`;
+  - `ig_detector_run`: an attack in the prefix is found with `truncated = 1`; an attack wholly past the limit is not; a short value has `truncated = 0`; same verdict and fingerprint as a direct call; `NULL` detector and result;
+  - direct detectors reset `truncated` on a reused `res`.
