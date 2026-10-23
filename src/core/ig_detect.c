@@ -5,10 +5,21 @@
 
 #include <string.h>
 
+size_t ig_limit_len(size_t len, size_t max_len, int *truncated)
+{
+	int cut = max_len > 0 && len > max_len;
+
+	if (truncated != NULL) {
+		*truncated = cut;
+	}
+	return cut ? max_len : len;
+}
+
 /* Common argument handling. Returns 0 when the verdict is already final. */
 static int ig_detect_begin(const char *s, size_t len, ig_result_t *res)
 {
 	res->fingerprint[0] = '\0';
+	res->truncated = 0;
 	if (s == NULL) {
 		res->verdict = len == 0 ? IG_CLEAN : IG_ERROR;
 		return 0;

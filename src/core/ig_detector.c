@@ -49,3 +49,23 @@ const ig_detector_t *ig_detector_by_mask(unsigned int bit)
 	}
 	return NULL;
 }
+
+ig_verdict_t ig_detector_run(
+	const ig_detector_t *d, const char *s, size_t len, size_t max_len, ig_result_t *res)
+{
+	int truncated = 0;
+
+	if (res == NULL) {
+		return IG_ERROR;
+	}
+	if (d == NULL) {
+		res->verdict = IG_ERROR;
+		res->fingerprint[0] = '\0';
+		res->truncated = 0;
+		return IG_ERROR;
+	}
+	len = ig_limit_len(len, max_len, &truncated);
+	d->detect(s, len, res);
+	res->truncated = truncated;
+	return res->verdict;
+}
