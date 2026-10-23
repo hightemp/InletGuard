@@ -678,3 +678,22 @@ optional Redis/Memcached.
   - `tests/unit/test_limit.c`: `ig_limit_len` below, at and above the limit, `max_len = 0`, `NULL` flag, `len = 0`;
   - `ig_detector_run`: an attack in the prefix is found with `truncated = 1`; an attack wholly past the limit is not; a short value has `truncated = 0`; same verdict and fingerprint as a direct call; `NULL` detector and result;
   - direct detectors reset `truncated` on a reused `res`.
+
+### 1.7 Glob matcher for exclusions
+- **Context:** FR-5.4 — exclusions support simple `*` globs. Used by `exclude_params` (`post:user_*`), `exclude_paths`, module exclusions, IGR selectors (`get["user_*"]`) and headers. Parameter names and URI paths are case-sensitive in PHP; header names are not.
+- **Decision** (`src/core/ig_glob.{h,c}`): `int ig_glob_match(pat, plen, s, slen, flags)` → 1/0, matching the **whole** string.
+  - **Syntax:**
+    - `*` matches any sequence, including empty and across `/`, so `/admin/*` also covers `/admin/a/b` — simpler and more expected for exclusions than `**` semantics.
+    - `\` escapes the next character (`\*`, `\\`); a trailing `\` is literal.
+    - `?`, `[...]` and everything else are **literal**: `?` is common in URIs and a special meaning would surprise. The syntax grows only on request.
+  - **Case:** sensitive by default; `IG_GLOB_NOCASE` folds ASCII only (header names). Bytes ≥ 0x80 compare as is.
+  - **No recursion:** a greedy scan that backtracks to the last `*`. O(|pat|·|s|) worst case and constant stack, so a configured pattern cannot cause exponential matching or a stack overflow. Binary-safe (explicit lengths, NUL allowed).
+  - **Prefix semantics of `exclude_paths`** (FR-5.2) belong to the config layer (2.x): a pattern without `*` gets a trailing `*` when parsed. One matcher serves every place.
+  - `NULL` with a non-zero length → 0 (no match). No allocation, no state, ZTS-safe.
+- **Tests first** (`tests/unit/test_glob.c`):
+  - exact match and mismatch, empty pattern and string;
+  - `*` at the start, middle and end, repeated `*`, `*` across `/`, backtracking (`a*b*c` vs `aXbYbZc`);
+  - escaping: `\*`, `\\`, trailing `\`, an escaped ordinary letter; `?` and `[` literal;
+  - case: sensitive by default, `IG_GLOB_NOCASE` for ASCII, UTF-8 bytes not folded;
+  - NUL in the string and pattern, `NULL` arguments; a long string against many `*` finishes fast.
+  - Fuzz target `fuzz_glob`: agrees with a naive recursive reference on short inputs; `*` matches everything; a case-sensitive match implies a case-insensitive one.
